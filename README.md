@@ -1,2 +1,4 @@
-# strangeleaflet-lab
-Cool weird quirky toy webpages I can serve up from strangeleaflet.com
+# strangeleaflet-cabient
+
+A cabinet of curiousities I can serve up from cabinet.strangeleaflet.com.
+
