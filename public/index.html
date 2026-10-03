@@ -355,10 +355,10 @@ const CURIOS = [
     words: ["wave", "behringer", "synth"] },
   { id: "bits", name: "Bitfield Explorer", kind: "toy", href: "bitfield-explorer/",
     blurb: "Flip switches and read the bits as numbers, text, floats, colors, and dates.",
-    words: ["bitfield", "bits", "binary", "switches"] },
+    words: ["bitfield", "bits", "binary", "switches", "explorer"] },
   { id: "minifloat", name: "Minifloat Ruler", kind: "toy", href: "minifloat-ruler/",
     blurb: "Every number an 8-bit float can hold, on one ruler. Watch the gaps double.",
-    words: ["float", "floating point", "ieee", "minifloat", "rounding"] },
+    words: ["float", "floating point", "ieee", "minifloat", "rounding", "ruler"] },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -452,7 +452,7 @@ const VERBS = {
 
 const verbOf = (w) => Object.keys(VERBS).find((k) => VERBS[k].includes(w));
 
-const isLeaflet = (nouns) => nouns.includes("leaflet") || nouns.includes("paper");
+const isLeaflet = (nouns) => nouns.includes("leaflet");
 
 const OUT_WORDS = ["out", "outside", "back", "west", "w", "exit"];
 
@@ -564,7 +564,7 @@ function run(raw) {
   switch (verb) {
 
     case "look":
-      if (!cabinetOpen) return say("A tall glass-fronted cabinet stands against the wall. Each shelf holds a curio with a paper tag tied to it. The doors are closed.\n" + EXITS);
+      if (!cabinetOpen) return say("A tall glass-fronted cabinet stands against the wall. Each shelf holds curios that each have a paper tag tied to it. The doors are closed.\n" + EXITS);
       return say("The cabinet stands open. On its shelves:\n" + CURIOS.map((c) => "  • " + c.name).join("\n") + "\n" + EXITS);
 
     case "open": {
@@ -593,7 +593,19 @@ function run(raw) {
     case "examine": {
       if (!nouns.length) return say("Examine what?");
       if (isLeaflet(nouns)) return say(LEAFLET);
-      if (nouns.includes("cabinet")) return run("look");
+      if (nouns.includes("cabinet")) {
+        if (cabinetOpen) {
+          say("The cabinet is made of high quality polished wood with ornate carvings. Through its open doors you can see shelves of curios that each have a paper tag.");
+        } else {
+          say("The cabinet is made of high quality polished wood with ornate carvings. Through its glass doors you can see shelves of curios that each have a paper tag.");
+        }
+        return;
+      };
+      if (nouns.some((w) => ["paper", "tag", "tags"].includes(w))) {
+        const c = findCurio(nouns);
+        if(!c) return say("The paper tags are museum quality card stock with precisely handwritten lettering.");
+        return say(`The tag reads: ${c.name}. ${c.blurb}\n(Try "get ${c.words[0]}".)`);
+      }
       if (nouns.includes("placard")) return say(CAN_GO_BACK ? "You don't see any placard here." : PLACARD);
       if (nouns.includes("sign") || nouns.includes("exit")) return say(CAN_GO_BACK
         ? "A small sign glows over the west doorway. It reads EXIT."
