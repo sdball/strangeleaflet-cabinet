@@ -43,6 +43,7 @@
   --lcd-key: #7F8CC4;
   --lcd-tag: #8C9AD4;
   --lcd-cap: #96A0C8;
+  --lcd-alert: #FF7A85;
 
   --sans: "IBM Plex Sans", system-ui, sans-serif;
   --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
@@ -419,6 +420,72 @@ kbd {
   outline: 2px solid var(--amber);
   outline-offset: 2px;
 }
+
+/* ---------------- ADSR and UW demos ---------------- */
+
+/* Readouts wrap on narrow screens rather than scrolling the whole panel. */
+.wt .lcd-row,
+.demo .lcd-row {
+  flex-wrap: wrap;
+  row-gap: 10px;
+  min-width: 0;
+}
+
+.demo-plot {
+  display: block;
+  width: 100%;
+  height: 210px;
+  margin: 14px 0 10px;
+  background: var(--lcd-field);
+  border-radius: 2px;
+}
+.demo-msg {
+  min-height: 1.5em;
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  color: var(--lcd-cap);
+}
+.demo-msg.warn { color: var(--lcd-alert); }
+.demo-sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px 18px;
+  margin: 0 0 14px;
+}
+.demo-sliders label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--lcd-key);
+}
+.demo-sliders input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--amber);
+}
+.demo-sliders input:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+.demo-strip {
+  display: flex;
+  gap: 2px;
+  height: 18px;
+  margin: 0 0 14px;
+}
+.demo-strip i {
+  flex: 1 1 0;
+  background: var(--lcd-key);
+  opacity: .35;
+  border-radius: 1px;
+}
+.demo-strip i.hi { background: var(--amber); opacity: .9; }
+.demo-strip i.off { opacity: .12; }
+.demo-strip i.cur { background: #FFFFFF; opacity: 1; }
 
 /* ---------------- Sections ---------------- */
 
@@ -1069,6 +1136,32 @@ h3 .chk {
     <span class="lbl">The two stages depend on each other</span>
     <p><strong>Decay does nothing while Sustain sits at maximum</strong> — it is the fall <em>to</em> the sustain level, so if sustain is already full there is nowhere to fall and the decay time is inert. And <strong>Release does nothing once the envelope has already reached zero</strong>, because release fades from wherever the envelope currently is. Set Sustain to 00 to make decay audible and you remove the level that release needs. To hear all four stages at once, put Sustain somewhere in the middle — around 40 — with a moderate Decay and a long Release.</p>
   </div>
+
+  <div class="lcd demo" id="adsr">
+    <div class="lcd-tag">Try it · shape an envelope</div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Attack</span><span class="v" id="adsr-a-v">12</span></span>
+      <span class="lcd-cell"><span class="k">Decay</span><span class="v" id="adsr-d-v">30</span></span>
+      <span class="lcd-cell"><span class="k">Sustain</span><span class="v" id="adsr-s-v">40</span></span>
+      <span class="lcd-cell"><span class="k">Release</span><span class="v" id="adsr-r-v">45</span></span>
+      <span class="lcd-cell"><span class="k">Key held</span><span class="v" id="adsr-hold-v">2.5 s</span></span>
+    </div>
+    <canvas class="demo-plot" id="adsr-plot" aria-hidden="true"></canvas>
+    <p class="demo-msg" id="adsr-msg" aria-live="polite"></p>
+    <div class="demo-sliders">
+      <label>Attack <input type="range" id="adsr-a" min="0" max="63" value="12"></label>
+      <label>Decay <input type="range" id="adsr-d" min="0" max="63" value="30"></label>
+      <label>Sustain <input type="range" id="adsr-s" min="0" max="63" value="40"></label>
+      <label>Release <input type="range" id="adsr-r" min="0" max="63" value="45"></label>
+      <label>Key held <input type="range" id="adsr-hold" min="0.5" max="4" step="0.1" value="2.5"></label>
+    </div>
+    <div class="wt-controls">
+      <button type="button" class="wt-btn" id="adsr-play" aria-pressed="false">Play</button>
+    </div>
+    <p class="lcd-cap">Applied to loudness, like Envelope 2. Knob values run 00–63 as on the panel; the times they
+      map to are illustrative, not the Wave's exact curve. To see both traps from the note above, push Sustain to 63
+      and watch Decay go flat, then drop Sustain to 00 with a short Decay and watch Release go flat.</p>
+  </div>
   <p>That’s an <strong>ADSR</strong> envelope, and it’s what Envelopes 1 and 2 are. Envelope 3 is an <strong>AD</strong> envelope: attack and decay only, no sustain level and no release, so it always rises once and falls back regardless of how long you hold the key. In place of the missing controls it has an <strong>attenuation</strong> knob setting how far it travels.</p>
   <p>Applied to loudness an envelope is a volume shape. Applied to filter cutoff or wave position it’s a timbral shape — the same four numbers, describing a journey through the wavetable instead of a change in level. That reuse is the whole idea behind Lesson 03.</p>
 
@@ -1508,6 +1601,34 @@ h3 .chk {
   <p>Starting at 00 with a depth of 63 lands you exactly on 63, so nothing wraps. To hear wrapping, set <strong>UW 0</strong> and <strong>Waves Osc 20</strong>: the envelope now aims for 83, which doesn't exist, so it rolls over the end of the table and reappears at the bottom. Then set <strong>UW 2</strong> — the same sweep simply stops at the ceiling instead.</p>
 
   <p>Try <strong>UW 1</strong> on the same patch — a completely different route, because you're no longer travelling through one table.</p>
+
+  <div class="lcd demo" id="uw">
+    <div class="lcd-tag">Try it · the same sweep at UW 0 and UW 2</div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v" id="uw-osc-v">20</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v" id="uw-depth-v">63</span></span>
+      <span class="lcd-cell"><span class="k">Aims for</span><span class="v" id="uw-aim-v">83</span></span>
+      <span class="lcd-cell"><span class="k">Top of sweep</span><span class="v" id="uw-top-v">wraps to 19</span></span>
+      <span class="lcd-cell"><span class="k">Pos</span><span class="v" id="uw-pos-v">--</span></span>
+    </div>
+    <canvas class="demo-plot" id="uw-plot" aria-hidden="true"></canvas>
+    <div class="demo-strip" id="uw-strip" aria-hidden="true"></div>
+    <div class="demo-sliders">
+      <label>Waves Osc <input type="range" id="uw-osc" min="0" max="63" value="20"></label>
+      <label>ENV1 → Waves <input type="range" id="uw-depth" min="0" max="63" value="63"></label>
+    </div>
+    <div class="wt-controls">
+      <div class="wt-seg" role="group" aria-label="UW setting">
+        <button type="button" class="wt-btn" data-uw="0" aria-pressed="true">UW 0 · wrap</button>
+        <button type="button" class="wt-btn" data-uw="2" aria-pressed="false">UW 2 · clamp</button>
+      </div>
+      <button type="button" class="wt-btn" id="uw-play" aria-pressed="false">Play sweep</button>
+    </div>
+    <p class="lcd-cap">Envelope 1 is set as in this lesson — A1 40, D1 45, S1 00 — with illustrative times. The dashed
+      line is where the envelope aims; the amber line is the position you actually hear. The sound uses the Harmonic
+      stack table from the top of the page, which ends in the same four analog shapes, so at UW 0 you hear the
+      saw-to-triangle tail and the jump. UW 1 swaps in a different table altogether, so it isn't modelled here.</p>
+  </div>
 
   <div class="note warn">
     <span class="lbl">UW 2 costs you the analog waveforms</span>
@@ -4212,10 +4333,11 @@ h3 .chk {
   sync();
 })();
 
-// ---------------- wavetable explorer ----------------
-// Illustrative tables only: 64 single-cycle waves of 128 samples, like the
-// Wave's, but generated here rather than taken from the factory data.
-(function(){
+// ---------------- wavetable engine ----------------
+// Shared by the demos below. Illustrative tables only: 64 single-cycle waves
+// of 128 samples, like the Wave's, but generated here rather than taken from
+// the factory data. Plus one oscillator voice the demos take turns using.
+var waveEngine = (function(){
   var SAMPLES = 128, WAVES = 64, LAST_TABLE_WAVE = 59;
   var ANALOG = ['Sawtooth', 'Pulse', 'Square', 'Triangle'];
   var PITCH = 220; // Hz, A3
@@ -4318,6 +4440,177 @@ h3 .chk {
     return (built[id] = flat);
   }
 
+  // ---- sound ----
+  // Stepping switches waves mid-cycle, so the discontinuity (the click)
+  // is real; morphing glides the position and blends neighbouring waves.
+  // The DSP lives in one function so it can run inside an AudioWorklet, or
+  // on the main thread through a ScriptProcessorNode where worklets fail.
+  function createDsp(rate){
+    var table = null, target = 0, pos = 0, morph = false, phase = 0, pitch = 220;
+    var glide = 1 - Math.exp(-1 / (0.04 * rate));
+    return {
+      set: function(d){
+        if(d.table) table = d.table;
+        if('pos' in d) target = d.pos;
+        if('morph' in d) morph = d.morph;
+        if('pitch' in d) pitch = d.pitch;
+      },
+      render: function(out){
+        if(!table){ out.fill(0); return; }
+        var inc = pitch * 128 / rate;
+        for(var i = 0; i < out.length; i++){
+          var a, b, f;
+          if(morph){
+            pos += (target - pos) * glide;
+            a = Math.floor(pos); b = Math.min(a + 1, 63); f = pos - a;
+          } else {
+            pos = target; a = b = Math.round(target); f = 0;
+          }
+          var j = Math.floor(phase), k = (j + 1) & 127, x = phase - j;
+          var sa = table[a * 128 + j] + (table[a * 128 + k] - table[a * 128 + j]) * x;
+          var sb = table[b * 128 + j] + (table[b * 128 + k] - table[b * 128 + j]) * x;
+          out[i] = sa + (sb - sa) * f;
+          phase = (phase + inc) % 128;
+        }
+      }
+    };
+  }
+
+  var WORKLET =
+    'var createDsp = ' + createDsp.toString() + ';\n' +
+    'class WaveVoice extends AudioWorkletProcessor {\n' +
+    '  constructor(){ super(); this.dsp = createDsp(sampleRate); this.port.onmessage = (e) => this.dsp.set(e.data); }\n' +
+    '  process(inputs, outputs){ this.dsp.render(outputs[0][0]); return true; }\n' +
+    '}\n' +
+    'registerProcessor("wave-voice", WaveVoice);';
+
+  var AudioCtx = window.AudioContext || window.webkitAudioContext;
+
+  var MAX_GAIN = .16;
+
+  // One voice shared by every demo on the page. A demo claims it, and the
+  // previous owner is told so it can reset its controls.
+  var voice = {
+    ctx: null, gain: null, ready: null, post: function(){},
+    owner: null, onLose: null,
+    supported: !!AudioCtx,
+
+    // Build the audio graph once: worklet if the browser will load it,
+    // otherwise the ScriptProcessorNode fallback.
+    setup: function(){
+      var self = this, ctx = this.ctx;
+      this.gain = ctx.createGain();
+      this.gain.gain.value = 0;
+      this.gain.connect(ctx.destination);
+
+      function useWorklet(){
+        var url = URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' }));
+        return ctx.audioWorklet.addModule(url).then(function(){
+          var node = new AudioWorkletNode(ctx, 'wave-voice', { outputChannelCount: [1] });
+          node.connect(self.gain);
+          self.post = function(msg){ node.port.postMessage(msg); };
+        });
+      }
+      function useScriptProcessor(){
+        var dsp = createDsp(ctx.sampleRate);
+        var node = ctx.createScriptProcessor(1024, 1, 1);
+        node.onaudioprocess = function(e){ dsp.render(e.outputBuffer.getChannelData(0)); };
+        node.connect(self.gain);
+        self.post = dsp.set;
+        self.keepAlive = node; // some browsers drop unreferenced processors
+      }
+
+      var worklet = (ctx.audioWorklet && window.AudioWorkletNode) ? useWorklet() : Promise.reject();
+      return worklet.catch(useScriptProcessor).then(function(){
+        self.post({ pitch: PITCH });
+      });
+    },
+
+    // Must be called straight from a click: Safari only lets audio start
+    // inside the user gesture, so the context is created and resumed here
+    // before any asynchronous setup.
+    claim: function(owner, onLose){
+      if(this.owner && this.owner !== owner && this.onLose) this.onLose();
+      this.owner = owner;
+      this.onLose = onLose;
+      if(!AudioCtx) return Promise.reject(new Error('Web Audio is not available'));
+      if(!this.ctx){
+        this.ctx = new AudioCtx();
+        if(navigator.audioSession) navigator.audioSession.type = 'playback'; // play despite iOS silent switch
+      }
+      var resumed = this.ctx.resume();
+      if(!this.ready) this.ready = this.setup();
+      return Promise.all([resumed, this.ready]);
+    },
+    owns: function(owner){ return this.owner === owner; },
+    send: function(owner, msg){ if(this.owns(owner)) this.post(msg); },
+
+    // Glide to `level` (0-1) of full volume.
+    level: function(owner, level){
+      if(!this.owns(owner) || !this.gain) return;
+      var g = this.gain.gain, now = this.ctx.currentTime;
+      g.cancelScheduledValues(now);
+      g.setTargetAtTime(level * MAX_GAIN, now, .02);
+    },
+    // Start from silence and ramp linearly through [seconds from now, level] points.
+    shape: function(owner, points){
+      if(!this.owns(owner) || !this.gain) return;
+      var g = this.gain.gain, now = this.ctx.currentTime;
+      g.cancelScheduledValues(now);
+      g.setValueAtTime(0, now);
+      points.forEach(function(p){ g.linearRampToValueAtTime(p[1] * MAX_GAIN, now + p[0]); });
+    },
+    release: function(owner){
+      if(!this.owns(owner)) return;
+      this.level(owner, 0);
+      this.owner = null;
+      this.onLose = null;
+    }
+  };
+
+  // Fall silent when the tab is hidden, and let the owner reset its controls.
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden || !voice.owner) return;
+    var lose = voice.onLose;
+    voice.release(voice.owner);
+    if(lose) lose();
+  });
+
+  // ---- drawing helpers ----
+
+  // Size a canvas for the screen's pixel density and clear it.
+  function canvas2d(canvas){
+    var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+    var pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+    if(canvas.width !== pw || canvas.height !== ph){ canvas.width = pw; canvas.height = ph; }
+    var c = canvas.getContext('2d');
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, w, h);
+    return { c: c, w: w, h: h };
+  }
+  function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+
+  // Call `draw` again whenever the canvas changes size or the theme changes.
+  function redrawOn(canvas, draw){
+    if(window.ResizeObserver) new ResizeObserver(function(){ draw(); }).observe(canvas);
+    new MutationObserver(function(){ draw(); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+
+  return {
+    SAMPLES: SAMPLES, WAVES: WAVES, LAST_TABLE_WAVE: LAST_TABLE_WAVE, ANALOG: ANALOG,
+    TABLES: TABLES, build: build, voice: voice,
+    canvas2d: canvas2d, cssVar: cssVar, pad2: pad2, redrawOn: redrawOn
+  };
+})();
+
+// ---------------- wavetable explorer (header) ----------------
+(function(){
+  var E = waveEngine, voice = E.voice, OWNER = 'explorer';
+  var SAMPLES = E.SAMPLES, WAVES = E.WAVES, LAST_TABLE_WAVE = E.LAST_TABLE_WAVE;
+  var ANALOG = E.ANALOG, TABLES = E.TABLES, build = E.build;
+
   var el = function(id){ return document.getElementById(id); };
   var panel = el('wt'), canvas = el('wt-scope'), slider = el('wt-slider'), select = el('wt-select');
   var playBtn = el('wt-play'), sweepBtn = el('wt-sweep');
@@ -4369,121 +4662,13 @@ h3 .chk {
     lastCell = cells[n];
     lastCell.classList.add('cur');
     draw();
-    voice.send({ pos: p });
+    voice.send(OWNER, { pos: p });
   }
 
   function setPos(p){
     state.pos = Math.max(0, Math.min(WAVES - 1, p));
     render();
   }
-
-  // ---- sound: one oscillator voice ----
-  // Stepping switches waves mid-cycle, so the discontinuity (the click)
-  // is real; morphing glides the position and blends neighbouring waves.
-  // The DSP lives in one function so it can run inside an AudioWorklet, or
-  // on the main thread through a ScriptProcessorNode where worklets fail.
-  function createDsp(rate){
-    var table = null, target = 0, pos = 0, morph = false, phase = 0, pitch = 220;
-    var glide = 1 - Math.exp(-1 / (0.04 * rate));
-    return {
-      set: function(d){
-        if(d.table) table = d.table;
-        if('pos' in d) target = d.pos;
-        if('morph' in d) morph = d.morph;
-        if('pitch' in d) pitch = d.pitch;
-      },
-      render: function(out){
-        if(!table){ out.fill(0); return; }
-        var inc = pitch * 128 / rate;
-        for(var i = 0; i < out.length; i++){
-          var a, b, f;
-          if(morph){
-            pos += (target - pos) * glide;
-            a = Math.floor(pos); b = Math.min(a + 1, 63); f = pos - a;
-          } else {
-            pos = target; a = b = Math.round(target); f = 0;
-          }
-          var j = Math.floor(phase), k = (j + 1) & 127, x = phase - j;
-          var sa = table[a * 128 + j] + (table[a * 128 + k] - table[a * 128 + j]) * x;
-          var sb = table[b * 128 + j] + (table[b * 128 + k] - table[b * 128 + j]) * x;
-          out[i] = sa + (sb - sa) * f;
-          phase = (phase + inc) % 128;
-        }
-      }
-    };
-  }
-
-  var WORKLET =
-    'var createDsp = ' + createDsp.toString() + ';\n' +
-    'class WaveVoice extends AudioWorkletProcessor {\n' +
-    '  constructor(){ super(); this.dsp = createDsp(sampleRate); this.port.onmessage = (e) => this.dsp.set(e.data); }\n' +
-    '  process(inputs, outputs){ this.dsp.render(outputs[0][0]); return true; }\n' +
-    '}\n' +
-    'registerProcessor("wave-voice", WaveVoice);';
-
-  var AudioCtx = window.AudioContext || window.webkitAudioContext;
-
-  var voice = {
-    ctx: null, gain: null, send: function(){}, ready: null, on: false,
-    supported: !!AudioCtx,
-
-    // Build the audio graph once: worklet if the browser will load it,
-    // otherwise the ScriptProcessorNode fallback.
-    setup: function(){
-      var self = this, ctx = this.ctx;
-      this.gain = ctx.createGain();
-      this.gain.gain.value = 0;
-      this.gain.connect(ctx.destination);
-
-      function useWorklet(){
-        var url = URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' }));
-        return ctx.audioWorklet.addModule(url).then(function(){
-          var node = new AudioWorkletNode(ctx, 'wave-voice', { outputChannelCount: [1] });
-          node.connect(self.gain);
-          self.send = function(msg){ node.port.postMessage(msg); };
-        });
-      }
-      function useScriptProcessor(){
-        var dsp = createDsp(ctx.sampleRate);
-        var node = ctx.createScriptProcessor(1024, 1, 1);
-        node.onaudioprocess = function(e){ dsp.render(e.outputBuffer.getChannelData(0)); };
-        node.connect(self.gain);
-        self.send = dsp.set;
-        self.keepAlive = node; // some browsers drop unreferenced processors
-      }
-
-      var worklet = (ctx.audioWorklet && window.AudioWorkletNode) ? useWorklet() : Promise.reject();
-      return worklet.catch(useScriptProcessor).then(function(){
-        self.send({ pitch: PITCH });
-      });
-    },
-
-    // Must be called straight from a click: Safari only lets audio start
-    // inside the user gesture, so the context is created and resumed here
-    // before any asynchronous setup.
-    start: function(){
-      var self = this;
-      if(!this.ctx){
-        this.ctx = new AudioCtx();
-        if(navigator.audioSession) navigator.audioSession.type = 'playback'; // play despite iOS silent switch
-      }
-      var resumed = this.ctx.resume();
-      if(!this.ready) this.ready = this.setup();
-      return Promise.all([resumed, this.ready]).then(function(){
-        self.send({ table: build(state.table), morph: state.morph, pos: state.pos });
-        var g = self.gain.gain, now = self.ctx.currentTime;
-        g.cancelScheduledValues(now);
-        g.setTargetAtTime(.16, now, .02);
-        self.on = true;
-      });
-    },
-
-    stop: function(){
-      if(!this.gain) return;
-      this.gain.gain.setTargetAtTime(0, this.ctx.currentTime, .02);
-      this.on = false;
-    }
-  };
 
   // ---- automatic sweep: 0 to 59 and back, like a slow envelope ----
   var sweep = { raf: 0, start: 0 };
@@ -4509,7 +4694,7 @@ h3 .chk {
 
   select.addEventListener('change', function(){
     state.table = select.value;
-    voice.send({ table: build(state.table) });
+    voice.send(OWNER, { table: build(state.table) });
     render();
   });
 
@@ -4517,7 +4702,7 @@ h3 .chk {
     b.addEventListener('click', function(){
       state.morph = b.dataset.osc === '1';
       oscBtns.forEach(function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
-      voice.send({ morph: state.morph });
+      voice.send(OWNER, { morph: state.morph });
       render();
     });
   });
@@ -4528,22 +4713,23 @@ h3 .chk {
     playBtn.disabled = true;
     playBtn.title = 'This browser cannot play the explorer’s sound';
   }
+  function setPlaying(on){ playBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
   playBtn.addEventListener('click', function(){
-    if(voice.on){
-      voice.stop();
-      playBtn.setAttribute('aria-pressed', 'false');
-    } else {
-      voice.start().then(function(){ playBtn.setAttribute('aria-pressed', 'true'); })
-        .catch(function(err){
-          console.error('Wavetable explorer: sound failed to start', err);
-          playBtn.disabled = true;
-          playBtn.textContent = 'No sound';
-          playBtn.title = 'Sound failed to start: ' + (err && err.message || err);
-        });
+    if(voice.owns(OWNER)){
+      voice.release(OWNER);
+      setPlaying(false);
+      return;
     }
-  });
-  document.addEventListener('visibilitychange', function(){
-    if(document.hidden && voice.on){ voice.stop(); playBtn.setAttribute('aria-pressed', 'false'); }
+    voice.claim(OWNER, function(){ setPlaying(false); }).then(function(){
+      voice.send(OWNER, { table: build(state.table), morph: state.morph, pos: state.pos });
+      voice.level(OWNER, 1);
+      setPlaying(true);
+    }).catch(function(err){
+      console.error('Wavetable explorer: sound failed to start', err);
+      playBtn.disabled = true;
+      playBtn.textContent = 'No sound';
+      playBtn.title = 'Sound failed to start: ' + (err && err.message || err);
+    });
   });
 
   // Click or drag along the header strip to choose a position.
@@ -4564,6 +4750,334 @@ h3 .chk {
   if(window.ResizeObserver) new ResizeObserver(draw).observe(canvas);
   new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   render();
+})();
+
+// ---------------- ADSR demo (primer) ----------------
+// A loudness envelope you can reshape. Stages that have stopped doing
+// anything are drawn dashed, with the reason underneath.
+(function(){
+  var E = waveEngine, voice = E.voice, OWNER = 'adsr';
+  var el = function(id){ return document.getElementById(id); };
+  var root = el('adsr');
+  if(!root) return;
+  var plot = el('adsr-plot'), msg = el('adsr-msg'), playBtn = el('adsr-play');
+  var inputs = { a: el('adsr-a'), d: el('adsr-d'), s: el('adsr-s'), r: el('adsr-r'), hold: el('adsr-hold') };
+  var WINDOW = 9; // seconds across the plot
+  var play = { raf: 0, start: 0, end: 0 };
+
+  // Knob value 0-63 to seconds. The curve is illustrative, not the Wave's.
+  function secs(v){ return .003 + 4 * Math.pow(v / 63, 2.2); }
+
+  function model(){
+    var A = secs(+inputs.a.value), D = secs(+inputs.d.value), S = +inputs.s.value / 63;
+    var R = secs(+inputs.r.value), H = +inputs.hold.value;
+    // Level at the moment the key comes up, which is where release starts from.
+    var L = H < A ? H / A : H < A + D ? 1 - (1 - S) * (H - A) / D : S;
+    return {
+      A: A, D: D, S: S, R: R, H: H, L: L,
+      cutShort: H < A,
+      decayInert: S === 1 && H > A,
+      releaseInert: L < 1e-6
+    };
+  }
+
+  function levelAt(m, t){
+    if(t < m.H){
+      if(t < m.A) return t / m.A;
+      if(t < m.A + m.D) return 1 - (1 - m.S) * (t - m.A) / m.D;
+      return m.S;
+    }
+    var u = t - m.H;
+    return u < m.R ? m.L * (1 - u / m.R) : 0;
+  }
+
+  // The stages that actually happen, as [letter, from, to, inert].
+  function stages(m){
+    var s = [['A', 0, Math.min(m.A, m.H), false]];
+    if(m.H > m.A) s.push(['D', m.A, Math.min(m.A + m.D, m.H), m.decayInert]);
+    if(m.H > m.A + m.D) s.push(['S', m.A + m.D, m.H, false]);
+    s.push(['R', m.H, m.H + m.R, m.releaseInert]);
+    return s;
+  }
+
+  // The same envelope as gain ramps: [seconds after key down, level].
+  function ramps(m){
+    var p;
+    if(m.H < m.A) p = [[m.H, m.L]];
+    else if(m.H < m.A + m.D) p = [[m.A, 1], [m.H, m.L]];
+    else p = [[m.A, 1], [m.A + m.D, m.S], [m.H, m.S]];
+    p.push([m.H + m.R, 0]);
+    return p;
+  }
+
+  function draw(t){
+    var m = model(), g = E.canvas2d(plot), c = g.c, w = g.w, h = g.h;
+    var padL = 12, padR = 12, padT = 38, padB = 22;
+    var x = function(s){ return padL + s / WINDOW * (w - padL - padR); };
+    var y = function(v){ return h - padB - v * (h - padT - padB); };
+    var key = E.cssVar('--lcd-key'), edge = E.cssVar('--lcd-edge');
+    var amber = E.cssVar('--amber'), alert = E.cssVar('--lcd-alert');
+    c.font = '10px "IBM Plex Mono", monospace';
+
+    // Key-down region, then the time axis.
+    c.fillStyle = 'rgba(127, 140, 196, .12)';
+    c.fillRect(x(0), 4, x(m.H) - x(0), y(0) - 4);
+    c.fillStyle = key;
+    c.fillText('KEY DOWN', x(0) + 6, 16);
+    c.fillText('KEY UP', x(m.H) + 6, 16);
+    c.strokeStyle = edge;
+    c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x(0), y(0) + .5); c.lineTo(x(WINDOW), y(0) + .5); c.stroke();
+    for(var s = 1; s < WINDOW; s++) c.fillText(s + 's', x(s) - 6, h - 6);
+
+    // Each stage in turn; inert ones dashed in red.
+    c.lineWidth = 2.5;
+    c.lineJoin = 'round';
+    stages(m).forEach(function(st){
+      var from = st[1], to = st[2], inert = st[3];
+      c.strokeStyle = inert ? alert : amber;
+      c.setLineDash(inert ? [5, 4] : []);
+      c.beginPath();
+      for(var i = 0; i <= 48; i++){
+        var tt = from + (to - from) * i / 48, px = x(tt), py = y(levelAt(m, tt));
+        i ? c.lineTo(px, py) : c.moveTo(px, py);
+      }
+      c.stroke();
+      if(x(to) - x(from) > 12){
+        var mid = (from + to) / 2;
+        c.fillStyle = inert ? alert : key;
+        c.fillText(st[0], x(mid) - 3, y(levelAt(m, mid)) - 8);
+      }
+    });
+    c.setLineDash([]);
+
+    if(t != null){
+      c.strokeStyle = 'rgba(255, 255, 255, .7)';
+      c.lineWidth = 1;
+      c.beginPath(); c.moveTo(x(t), 4); c.lineTo(x(t), y(0)); c.stroke();
+    }
+  }
+
+  function update(){
+    var m = model();
+    el('adsr-a-v').textContent = E.pad2(+inputs.a.value);
+    el('adsr-d-v').textContent = E.pad2(+inputs.d.value);
+    el('adsr-s-v').textContent = E.pad2(+inputs.s.value);
+    el('adsr-r-v').textContent = E.pad2(+inputs.r.value);
+    el('adsr-hold-v').textContent = (+inputs.hold.value).toFixed(1) + ' s';
+
+    var notes = [];
+    if(m.cutShort) notes.push('The key comes up before the attack finishes, so the note never reaches full level.');
+    if(m.decayInert) notes.push('Decay does nothing: Sustain is at maximum, so there is no lower level to fall to.');
+    if(m.releaseInert) notes.push('Release does nothing: the envelope reached zero before the key came up.');
+    msg.textContent = notes.length ? notes.join(' ') : 'All four stages are shaping the note.';
+    msg.classList.toggle('warn', m.decayInert || m.releaseInert);
+    if(!play.raf) draw(null);
+  }
+
+  // ---- playback: the plotted envelope on loudness, playhead following ----
+  function stop(){
+    cancelAnimationFrame(play.raf);
+    play.raf = 0;
+    playBtn.setAttribute('aria-pressed', 'false');
+    draw(null);
+  }
+  function frame(now){
+    if(!play.start) play.start = now;
+    var t = (now - play.start) / 1000;
+    if(t > play.end){ voice.release(OWNER); stop(); return; }
+    draw(t);
+    play.raf = requestAnimationFrame(frame);
+  }
+  function begin(){
+    play.start = 0;
+    play.end = model().H + model().R + .15;
+    play.raf = requestAnimationFrame(frame);
+  }
+
+  playBtn.addEventListener('click', function(){
+    if(play.raf){ voice.release(OWNER); stop(); return; }
+    playBtn.setAttribute('aria-pressed', 'true');
+    if(!voice.supported){ begin(); return; }
+    voice.claim(OWNER, stop).then(function(){
+      voice.send(OWNER, { table: E.build('stack'), morph: false, pos: 24 });
+      voice.shape(OWNER, ramps(model()));
+      begin();
+    }).catch(function(err){
+      console.error('ADSR demo: sound failed to start', err);
+      playBtn.title = 'Sound failed to start: ' + (err && err.message || err);
+      begin();
+    });
+  });
+
+  Object.keys(inputs).forEach(function(k){ inputs[k].addEventListener('input', update); });
+  E.redrawOn(plot, function(){ if(!play.raf) draw(null); });
+  update();
+})();
+
+// ---------------- UW demo (Lesson 02) ----------------
+// The lesson's own sweep: Envelope 1 at A1 40, D1 45, S1 00 drives the wave
+// position from Waves Osc up by the ENV1 -> Waves depth and back. UW 0
+// wraps anything past 63 round to the bottom; UW 2 clamps at 59.
+(function(){
+  var E = waveEngine, voice = E.voice, OWNER = 'uw';
+  var el = function(id){ return document.getElementById(id); };
+  var root = el('uw');
+  if(!root) return;
+  var plot = el('uw-plot'), strip = el('uw-strip'), oscIn = el('uw-osc'), depthIn = el('uw-depth');
+  var playBtn = el('uw-play'), uwBtns = root.querySelectorAll('[data-uw]');
+
+  var ATTACK = 1.6, DECAY = 2.4, LENGTH = ATTACK + DECAY; // seconds, illustrative
+  var TOP = 128; // plot height in positions: room for 63 + 63
+  var state = { uw: 0, osc: 20, depth: 63 };
+  var play = { raf: 0, start: 0 };
+
+  var cells = [];
+  for(var n = 0; n < E.WAVES; n++){
+    var cell = document.createElement('i');
+    if(n > E.LAST_TABLE_WAVE) cell.className = 'hi';
+    strip.appendChild(cell);
+    cells.push(cell);
+  }
+
+  function env(t){ return t < ATTACK ? t / ATTACK : Math.max(0, 1 - (t - ATTACK) / DECAY); }
+  // Where the envelope aims, and where UW lets the oscillator actually go.
+  function aim(t){ return state.osc + env(t) * state.depth; }
+  function played(a){
+    var p = Math.floor(a);
+    return state.uw === 0 ? p % E.WAVES : Math.min(p, E.LAST_TABLE_WAVE);
+  }
+
+  function draw(t){
+    var g = E.canvas2d(plot), c = g.c, w = g.w, h = g.h;
+    var padL = 40, padR = 12, padT = 10, padB = 22;
+    var x = function(s){ return padL + s / LENGTH * (w - padL - padR); };
+    var y = function(p){ return h - padB - p / TOP * (h - padT - padB); };
+    var key = E.cssVar('--lcd-key'), edge = E.cssVar('--lcd-edge'), amber = E.cssVar('--amber');
+    c.font = '10px "IBM Plex Mono", monospace';
+
+    // Bands: the musical part of the table, then the four analog shapes.
+    c.fillStyle = 'rgba(127, 140, 196, .12)';
+    c.fillRect(padL, y(60), w - padL - padR, y(0) - y(60));
+    c.fillStyle = state.uw === 0 ? 'rgba(245, 166, 35, .16)' : 'rgba(245, 166, 35, .05)';
+    c.fillRect(padL, y(64), w - padL - padR, y(60) - y(64));
+    c.strokeStyle = edge;
+    c.lineWidth = 1;
+    c.beginPath(); c.moveTo(padL, y(64) + .5); c.lineTo(w - padR, y(64) + .5); c.stroke();
+
+    c.fillStyle = key;
+    c.fillText('00', 8, y(0) + 3);
+    c.fillStyle = state.uw === 0 ? amber : key;
+    c.fillText('60–63', 4, y(62) + 3);
+    c.fillStyle = key;
+    c.fillText('126', 8, y(126) + 8);
+    c.fillText('beyond the table', padL + 6, y(126) + 8);
+    c.fillText('attack', x(ATTACK / 2) - 18, h - 6);
+    c.fillText('decay', x(ATTACK + DECAY / 2) - 15, h - 6);
+    if(state.uw === 2){
+      c.fillStyle = amber;
+      c.fillText('ceiling 59', w - padR - 70, y(60) - 4);
+    }
+
+    // Where the envelope aims (dashed) and the position you hear (solid).
+    // The solid line breaks where it jumps, so a wrap shows as a gap.
+    var steps = 400, i, tt;
+    c.strokeStyle = key;
+    c.setLineDash([4, 4]);
+    c.lineWidth = 1.5;
+    c.beginPath();
+    for(i = 0; i <= steps; i++){
+      tt = LENGTH * i / steps;
+      i ? c.lineTo(x(tt), y(aim(tt))) : c.moveTo(x(tt), y(aim(tt)));
+    }
+    c.stroke();
+    c.setLineDash([]);
+
+    c.strokeStyle = amber;
+    c.lineWidth = 2.5;
+    c.beginPath();
+    var prev = null;
+    for(i = 0; i <= steps; i++){
+      tt = LENGTH * i / steps;
+      var p = played(aim(tt)) + .5;
+      if(prev === null || Math.abs(p - prev) > 8) c.moveTo(x(tt), y(p));
+      else c.lineTo(x(tt), y(p));
+      prev = p;
+    }
+    c.stroke();
+
+    if(t != null){
+      c.strokeStyle = 'rgba(255, 255, 255, .7)';
+      c.lineWidth = 1;
+      c.beginPath(); c.moveTo(x(t), padT); c.lineTo(x(t), y(0)); c.stroke();
+    }
+  }
+
+  function update(t){
+    var peak = state.osc + state.depth;
+    el('uw-osc-v').textContent = E.pad2(state.osc);
+    el('uw-depth-v').textContent = E.pad2(state.depth);
+    el('uw-aim-v').textContent = E.pad2(peak);
+    el('uw-top-v').textContent = state.uw === 0
+      ? (peak > 63 ? 'wraps to ' + E.pad2(peak % 64) : E.pad2(peak))
+      : (peak > 59 ? 'held at 59' : E.pad2(peak));
+    var cur = t == null ? null : played(aim(t));
+    el('uw-pos-v').textContent = cur == null ? '--' : E.pad2(cur);
+    cells.forEach(function(cell, n){
+      cell.classList.toggle('off', state.uw === 2 && n > E.LAST_TABLE_WAVE);
+      cell.classList.toggle('cur', n === cur);
+    });
+    draw(t);
+  }
+
+  // ---- playback: one pass of the envelope, with sound if available ----
+  function stop(){
+    cancelAnimationFrame(play.raf);
+    play.raf = 0;
+    playBtn.setAttribute('aria-pressed', 'false');
+    update(null);
+  }
+  function frame(now){
+    if(!play.start) play.start = now;
+    var t = (now - play.start) / 1000;
+    if(t > LENGTH + .3){ voice.release(OWNER); stop(); return; }
+    t = Math.min(t, LENGTH);
+    update(t);
+    voice.send(OWNER, { pos: played(aim(t)) });
+    play.raf = requestAnimationFrame(frame);
+  }
+  function begin(){
+    play.start = 0;
+    play.raf = requestAnimationFrame(frame);
+  }
+
+  playBtn.addEventListener('click', function(){
+    if(play.raf){ voice.release(OWNER); stop(); return; }
+    playBtn.setAttribute('aria-pressed', 'true');
+    if(!voice.supported){ begin(); return; }
+    voice.claim(OWNER, stop).then(function(){
+      voice.send(OWNER, { table: E.build('stack'), morph: false, pos: played(aim(0)) });
+      voice.level(OWNER, 1);
+      begin();
+    }).catch(function(err){
+      console.error('UW demo: sound failed to start', err);
+      playBtn.title = 'Sound failed to start: ' + (err && err.message || err);
+      begin();
+    });
+  });
+
+  oscIn.addEventListener('input', function(){ state.osc = +oscIn.value; if(!play.raf) update(null); });
+  depthIn.addEventListener('input', function(){ state.depth = +depthIn.value; if(!play.raf) update(null); });
+  uwBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      state.uw = +b.dataset.uw;
+      uwBtns.forEach(function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+      if(!play.raf) update(null);
+    });
+  });
+
+  E.redrawOn(plot, function(){ if(!play.raf) draw(null); });
+  update(null);
 })();
 </script>
 </body>
