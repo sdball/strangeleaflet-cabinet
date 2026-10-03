@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minifloat ruler — The Cabinet of Curios</title>
+<meta name="description" content="Every value an 8-bit float can hold, laid out on a ruler, so you can see where the gaps open up.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Martian+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Page: the same computer room as the bitfield explorer */
+  --bg: #D5DBE0;
+  --ink: #1C2330;
+  --muted: #536074;
+  --plate: #E9EDF0;
+  --line: #B3BDC7;
+  --bad: #A8231B;
+  --focus: #2A66CF;
+
+  /* Panel: a different machine in the same room, dark in either theme */
+  --panel: #17302D;
+  --panel-edge: #28493F;
+  --panel-ink: #DCEDE6;
+  --panel-muted: #8FB1A6;
+  --slot: #0A1816;
+  --lamp-off: #2D4943;
+  --lamp-on: #FFB43C;
+  --panel-focus: #F7D88C;
+
+  /* Field colors: sign, exponent, fraction */
+  --sign: #C9D2D4;
+  --exp: #B592F2;
+  --frac: #56C6EA;
+  --sign-ink: #4A5560;
+  --exp-ink: #6A44BE;
+  --frac-ink: #16739A;
+
+  /* Value classes in the table */
+  --c-zero: #E1E6EA;
+  --c-sub: #D2EBF4;
+  --c-norm: #F1F3F5;
+  --c-inf: #F7E3C4;
+  --c-nan: #EED6DE;
+
+  --mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Barlow", "Helvetica Neue", Arial, system-ui, sans-serif;
+
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151A21; --ink: #E3E7ED; --muted: #98A2B2; --plate: #1E242D; --line: #343E4B;
+    --bad: #FF8F86; --focus: #8AB4F8; --panel: #142A27; --panel-edge: #2B4D44;
+    --sign-ink: #C3CCD0; --exp-ink: #C5A8F7; --frac-ink: #7FD3EF;
+    --c-zero: #262D36; --c-sub: #18323C; --c-norm: #1E242D; --c-inf: #3A2F1C; --c-nan: #3A2230;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151A21; --ink: #E3E7ED; --muted: #98A2B2; --plate: #1E242D; --line: #343E4B;
+  --bad: #FF8F86; --focus: #8AB4F8; --panel: #142A27; --panel-edge: #2B4D44;
+  --sign-ink: #C3CCD0; --exp-ink: #C5A8F7; --frac-ink: #7FD3EF;
+  --c-zero: #262D36; --c-sub: #18323C; --c-norm: #1E242D; --c-inf: #3A2F1C; --c-nan: #3A2230;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 1.0625rem/1.5 var(--sans);
+  -webkit-text-size-adjust: 100%;
+}
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem 4rem;
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+
+.back {
+  display: inline-block;
+  color: var(--muted);
+  font-size: .95rem;
+  text-underline-offset: 3px;
+  margin-bottom: 1.25rem;
+}
+h1 {
+  font-weight: 600;
+  font-size: clamp(2.1rem, 6vw, 3.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0 0 .5rem;
+}
+.lede { margin: 0 0 1.75rem; color: var(--muted); max-width: 62ch; }
+h2 { font-size: 1.3rem; font-weight: 600; margin: 0 0 .75rem; letter-spacing: -0.005em; }
+
+/* ---------- Panel ---------- */
+.panel {
+  background: var(--panel);
+  color: var(--panel-ink);
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+  padding: 1rem 1.25rem 1.25rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 32px -24px rgba(6,20,18,.7);
+}
+.panel :focus-visible { outline-color: var(--panel-focus); }
+.panel-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem 1.25rem;
+  align-items: center;
+  margin-bottom: 1.4rem;
+}
+.layout-note { margin: 0; font-size: .95rem; color: var(--panel-muted); }
+
+.seg { display: inline-flex; border: 1px solid var(--panel-edge); border-radius: 6px; overflow: hidden; }
+.seg button {
+  font: 500 .95rem var(--sans);
+  color: var(--panel-muted);
+  background: transparent;
+  border: 0;
+  padding: .45rem .8rem;
+  min-height: 40px;
+  cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--panel-edge); }
+.seg button[aria-pressed="true"] { background: var(--panel-edge); color: var(--panel-ink); }
+
+/* Switches, grouped by field */
+.switches {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 1.1rem;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.grp { display: flex; flex-direction: column; align-items: center; }
+.grp-name { font-size: .85rem; color: var(--panel-muted); margin-bottom: .1rem; }
+.grp-val {
+  font: 600 1.05rem var(--mono);
+  color: var(--lamp-on);
+  margin-bottom: .55rem;
+  min-height: 1.4rem;
+  white-space: nowrap;
+}
+.grp-sw { display: flex; gap: 3px; }
+.sw {
+  width: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: 0;
+  padding: 2px 0 0;
+  margin: 0;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.lamp {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--lamp-off);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.55);
+  transition: background-color 80ms, box-shadow 80ms;
+}
+.sw[aria-checked="true"] .lamp {
+  background: radial-gradient(circle at 40% 35%, #FFF2C8, var(--lamp-on) 55%, #C9790F);
+  box-shadow: 0 0 9px 2px rgba(255,180,60,.55);
+}
+.slot {
+  position: relative;
+  width: 14px;
+  height: 42px;
+  border-radius: 3px;
+  background: var(--slot);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.6);
+}
+.paddle {
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  top: 19px; height: 25px;
+  border-radius: 3px 3px 5px 5px;
+  background: var(--handle);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.18), 0 3px 0 rgba(0,0,0,.35);
+  transition: top 90ms ease-out;
+}
+.sw[aria-checked="true"] .paddle {
+  top: -3px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 3px 0 rgba(255,255,255,.1), 0 1px 0 rgba(0,0,0,.35);
+}
+.idx {
+  font: 400 .62rem var(--mono);
+  color: var(--panel-muted);
+}
+
+/* The equation */
+.formula {
+  margin: 1.6rem 0 .3rem;
+  text-align: center;
+}
+.eq {
+  font: 400 clamp(1.25rem, 4.6vw, 2rem)/1.3 var(--mono);
+  overflow-wrap: anywhere;
+}
+.eq .s { color: var(--sign); }
+.eq .m { color: var(--frac); }
+.eq .hid { color: var(--panel-muted); }
+.eq .e { color: var(--exp); }
+.eq sup { font-size: .6em; }
+.eq sub { font-size: .5em; color: var(--panel-muted); }
+.eq .val { color: var(--panel-ink); }
+.eq .val b { font-weight: 600; color: var(--lamp-on); }
+.why {
+  margin: .35rem auto 0;
+  max-width: 60ch;
+  color: var(--panel-muted);
+  font-size: .98rem;
+}
+.why .e { color: var(--exp); }
+
+/* The ruler */
+.ruler-box { margin-top: 1.6rem; }
+.ruler-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem 1rem;
+  margin-bottom: .4rem;
+}
+.range { font-size: .95rem; color: var(--panel-muted); }
+.range b { font: 600 .9rem var(--mono); color: var(--panel-ink); }
+.zoom { display: inline-flex; gap: .4rem; }
+.btn {
+  font: 500 .92rem var(--sans);
+  color: var(--panel-ink);
+  background: var(--panel-edge);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 5px;
+  padding: .4rem .75rem;
+  min-height: 40px;
+  min-width: 40px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0,0,0,.35);
+}
+.btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.btn:disabled { opacity: .4; cursor: default; transform: none; }
+.btn[aria-pressed="true"] { background: #3C6A5D; }
+
+#ruler {
+  display: block;
+  width: 100%;
+  height: 112px;
+  touch-action: none;
+  cursor: crosshair;
+  border-radius: 6px;
+  background: var(--slot);
+}
+#ruler .band-a { fill: rgba(255,255,255,.035); }
+#ruler .band-b { fill: rgba(255,255,255,.085); }
+#ruler .band-sub { fill: rgba(86,198,234,.16); }
+#ruler .tick { stroke: var(--panel-ink); stroke-width: 1; opacity: .8; shape-rendering: crispEdges; }
+#ruler .tick.major { opacity: 1; }
+#ruler .axis { stroke: var(--panel-muted); stroke-width: 1; shape-rendering: crispEdges; }
+#ruler text { font: 400 11px var(--mono); fill: var(--panel-muted); }
+#ruler .mark { stroke: var(--lamp-on); stroke-width: 2; }
+#ruler .mark-head { fill: var(--lamp-on); }
+#ruler .aim { stroke: #FFFFFF; stroke-width: 1.5; stroke-dasharray: 3 3; }
+#ruler .aim-dot { fill: none; stroke: #FFFFFF; stroke-width: 1.5; }
+#ruler .gap { stroke: var(--frac); stroke-width: 3; stroke-linecap: round; }
+#ruler .off { fill: var(--lamp-on); font-weight: 600; }
+.caption { margin: .55rem 0 0; color: var(--panel-ink); font-size: 1rem; max-width: 72ch; }
+.hint { margin: .25rem 0 0; color: var(--panel-muted); font-size: .9rem; }
+
+.ops { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1.25rem; }
+
+/* ---------- Desk below the panel ---------- */
+.desk {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2rem 3rem;
+  margin-top: 2.25rem;
+  align-items: start;
+}
+.field {
+  display: flex;
+  align-items: baseline;
+  gap: .35rem;
+  background: var(--plate);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: .55rem .7rem;
+}
+.field:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
+.field.bad { border-color: var(--bad); }
+.field input {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: inherit;
+  font: 400 1rem var(--mono); padding: 0; outline: none;
+}
+.field button {
+  font: 500 .95rem var(--sans); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 5px; padding: .3rem .7rem; cursor: pointer;
+}
+.msg { margin: .4rem 0 0; font-size: .9rem; color: var(--bad); }
+.msg:empty { display: none; }
+
+.report { margin: 1rem 0 0; padding: 0; }
+.report div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: .5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.report div:first-child { border-top: 1px solid var(--line); }
+.report dt { color: var(--muted); }
+.report dd { margin: 0; font-family: var(--mono); font-size: .9rem; overflow-wrap: anywhere; }
+.verdict { margin: .9rem 0 0; }
+.empty { color: var(--muted); margin: 1rem 0 0; }
+
+.tries { list-style: none; margin: 0; padding: 0; }
+.tries li { padding: .6rem 0; border-bottom: 1px solid var(--line); }
+.tries li:first-child { border-top: 1px solid var(--line); }
+.tries p { margin: 0 0 .4rem; }
+.try {
+  font: 500 .95rem var(--sans); color: var(--ink); background: var(--plate);
+  border: 1px solid var(--line); border-radius: 5px; padding: .3rem .75rem;
+  min-height: 36px; cursor: pointer;
+}
+
+/* ---------- Table of every pattern ---------- */
+.every { margin-top: 2.75rem; }
+.every .sub-h { margin: -.4rem 0 1rem; color: var(--muted); max-width: 70ch; }
+.scroller { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--plate); }
+.grid { border-collapse: separate; border-spacing: 2px; padding: 4px; margin: 0 auto; }
+.grid th { font: 400 .72rem var(--mono); color: var(--muted); padding: .2rem .35rem; white-space: nowrap; }
+.grid thead th { color: var(--frac-ink); }
+.grid tbody th { text-align: right; }
+.grid tbody th .eb { color: var(--exp-ink); display: block; }
+.grid td { padding: 0; }
+.cell {
+  display: block; width: 100%; min-width: 3.4rem;
+  font: 400 .78rem var(--mono); color: var(--ink);
+  background: var(--c-norm); border: 1px solid transparent; border-radius: 4px;
+  padding: .45rem .45rem; cursor: pointer; white-space: nowrap; text-align: right;
+}
+.cell.zero { background: var(--c-zero); }
+.cell.sub { background: var(--c-sub); }
+.cell.inf { background: var(--c-inf); }
+.cell.nan { background: var(--c-nan); }
+.cell[aria-current="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); font-weight: 600; }
+.key { display: flex; flex-wrap: wrap; gap: .4rem .6rem; margin: .8rem 0 0; padding: 0; list-style: none; font-size: .9rem; }
+.key li { display: inline-flex; align-items: center; gap: .4rem; }
+.key i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); background: var(--c); }
+
+footer { margin-top: 3rem; color: var(--muted); font-size: .9rem; max-width: 70ch; }
+footer p { margin: 0 0 .5rem; }
+
+@media (max-width: 820px) {
+  .desk { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .wrap { padding-left: .9rem; padding-right: .9rem; }
+  .panel { padding: .9rem .75rem 1.1rem; }
+  .switches { gap: .6rem; }
+  .sw { width: 26px; }
+  .grp-sw { gap: 2px; }
+  .report div { grid-template-columns: 6rem minmax(0, 1fr); gap: .6rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paddle, .lamp { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">The Cabinet of Curios</a>
+  <h1>Minifloat ruler</h1>
+  <p class="lede">An 8-bit float has only 256 bit patterns, so you can see every number it can hold. Flip the switches, then watch where the value lands on the ruler and how far it is to the next one.</p>
+
+  <section class="panel" aria-label="Minifloat panel">
+    <div class="panel-top">
+      <div class="seg" role="group" aria-label="Bit layout" id="layouts">
+        <button type="button" data-f="e3m4">E3M4</button>
+        <button type="button" data-f="e4m3">E4M3</button>
+        <button type="button" data-f="e5m2">E5M2</button>
+      </div>
+      <p class="layout-note" id="layoutNote"></p>
+    </div>
+
+    <div class="switches" id="switches" role="group" aria-label="Bits, most significant first"></div>
+
+    <div class="formula" aria-live="polite">
+      <div class="eq" id="eq"></div>
+      <p class="why" id="why"></p>
+    </div>
+
+    <div class="ruler-box">
+      <div class="ruler-bar">
+        <span class="range" id="range"></span>
+        <span class="zoom">
+          <button type="button" class="btn" id="zoomOut" aria-label="Zoom out">−</button>
+          <button type="button" class="btn" id="zoomIn" aria-label="Zoom in">+</button>
+          <button type="button" class="btn" id="follow" aria-pressed="true">Follow value</button>
+        </span>
+      </div>
+      <svg id="ruler" tabindex="0" role="slider" aria-label="Ruler of every positive value. Drag or use the arrow keys to move between floats."></svg>
+      <p class="caption" id="caption"></p>
+      <p class="hint">Drag along the ruler and the value snaps to the nearest float. Negative numbers are a mirror image, so the ruler shows sizes only.</p>
+    </div>
+
+    <div class="ops">
+      <button type="button" class="btn" id="dec">Bits − 1</button>
+      <button type="button" class="btn" id="inc">Bits + 1</button>
+      <button type="button" class="btn" id="neg">Flip sign</button>
+      <button type="button" class="btn" id="one">Set to 1</button>
+    </div>
+  </section>
+
+  <div class="desk">
+    <section aria-labelledby="round-h">
+      <h2 id="round-h">Round a number</h2>
+      <form id="aimForm" novalidate>
+        <div class="field" id="aimField">
+          <input id="aimInput" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0.1, 3/7, 1e-3, inf" aria-label="Number to round" aria-describedby="aimMsg">
+          <button type="submit">Round</button>
+        </div>
+        <p class="msg" id="aimMsg"></p>
+      </form>
+      <div id="report"></div>
+    </section>
+
+    <section aria-labelledby="try-h">
+      <h2 id="try-h">Things to try</h2>
+      <ul class="tries">
+        <li><p>Start at zero and keep pressing Bits + 1. The first steps are all the same size. After that, the step doubles every time you pass a power of two.</p>
+          <button type="button" class="try" data-try="walk">Go to zero</button></li>
+        <li><p>Ask for 0.1. No minifloat equals it, and the report shows which neighbor it lands on and how far off it is.</p>
+          <button type="button" class="try" data-try="tenth">Round 0.1</button></li>
+        <li><p>Go to the largest number, then press Bits + 1. The exponent fills with ones and you reach infinity.</p>
+          <button type="button" class="try" data-try="max">Go to the largest</button></li>
+        <li><p>Keep the value at 1 and switch layouts. Every extra exponent bit doubles the range in powers of two and halves the steps between neighbors.</p>
+          <button type="button" class="try" data-try="layouts">Set to 1</button></li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="every" aria-labelledby="every-h">
+    <h2 id="every-h">Every pattern</h2>
+    <p class="sub-h" id="everySub"></p>
+    <div class="scroller"><table class="grid" id="grid"></table></div>
+    <ul class="key" aria-label="Key">
+      <li><i style="--c: var(--c-zero)"></i>Zero</li>
+      <li><i style="--c: var(--c-sub)"></i>Subnormal</li>
+      <li><i style="--c: var(--c-norm)"></i>Normal</li>
+      <li><i style="--c: var(--c-inf)"></i>Infinity</li>
+      <li><i style="--c: var(--c-nan)"></i>Not a number</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>These layouts follow the IEEE 754 rules: an exponent of all zeros means zero or a subnormal, and all ones means infinity or NaN. The FP8 E4M3 format used in machine learning, which the <a href="/bitfield-explorer/">bitfield explorer</a> shows, drops infinity and uses those patterns for bigger numbers, up to 448.</p>
+    <p>The layout and bit pattern live in the address bar, so you can share a link to any minifloat.</p>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const P2 = (n) => Math.pow(2, n);
+
+// ---------- Formats ----------
+const FORMATS = {
+  e3m4: { id: "e3m4", E: 3, F: 4 },
+  e4m3: { id: "e4m3", E: 4, F: 3 },
+  e5m2: { id: "e5m2", E: 5, F: 2 },
+};
+
+for (const f of Object.values(FORMATS)) {
+  f.bias = P2(f.E - 1) - 1;
+  f.maxE = P2(f.E) - 1;                // the all-ones exponent: infinity and NaN
+  f.emin = 1 - f.bias;                 // exponent of the smallest normal
+  f.emax = f.maxE - 1 - f.bias;        // exponent of the largest finite
+  f.top = f.maxE * P2(f.F);            // first non-finite magnitude pattern
+  f.mags = [];                         // every finite magnitude, in bit order (also value order)
+  for (let b = 0; b < f.top; b++) f.mags.push(decode(f, b).value);
+  f.max = f.mags[f.top - 1];
+  f.overflow = f.max + (f.max - f.mags[f.top - 2]) / 2; // at or past this, round to infinity
+}
+
+// Decode a bit pattern. Finite values are m × 2^k with integer m, so we can print them exactly.
+function decode(f, bits) {
+  const s = (bits >> 7) & 1, e = (bits >> f.F) & f.maxE, frac = bits & (P2(f.F) - 1);
+  const sign = s ? -1 : 1;
+  if (e === f.maxE) {
+    return frac === 0
+      ? { s, e, frac, kind: "inf", value: sign * Infinity }
+      : { s, e, frac, kind: "nan", value: NaN };
+  }
+  if (e === 0) {
+    const k = f.emin - f.F;
+    return { s, e, frac, kind: frac === 0 ? "zero" : "sub", m: frac, k, value: sign * frac * P2(k) };
+  }
+  const m = P2(f.F) + frac, k = e - f.bias - f.F;
+  return { s, e, frac, kind: "normal", m, k, value: sign * m * P2(k) };
+}
+
+// Round any number to the nearest pattern, ties to the even pattern, like IEEE 754's default.
+function encode(f, x) {
+  if (Number.isNaN(x)) return (f.maxE << f.F) | P2(f.F - 1);
+  const s = x < 0 || Object.is(x, -0) ? 128 : 0, a = Math.abs(x);
+  if (a >= f.overflow) return s | (f.maxE << f.F);
+  if (a >= f.max) return s | (f.top - 1);
+  let lo = 0, hi = f.top - 1;                 // mags[lo] <= a < mags[hi]
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (f.mags[mid] <= a) lo = mid; else hi = mid;
+  }
+  const dLo = a - f.mags[lo], dHi = f.mags[hi] - a;
+  const pick = dLo < dHi ? lo : dHi < dLo ? hi : (lo % 2 === 0 ? lo : hi);
+  return s | pick;
+}
+
+// ---------- Number formatting ----------
+function exact(m, k) {
+  if (m === 0) return "0";
+  if (k >= 0) return (BigInt(m) << BigInt(k)).toString();
+  const n = -k, digits = (BigInt(m) * 5n ** BigInt(n)).toString().padStart(n + 1, "0");
+  const whole = digits.slice(0, digits.length - n), frac = digits.slice(digits.length - n).replace(/0+$/, "");
+  return frac ? `${whole}.${frac}` : whole;
+}
+function exactOf(v) {               // exact decimal for a positive dyadic value
+  if (v === 0) return "0";
+  let k = 0, m = v;
+  while (!Number.isInteger(m)) { m *= 2; k--; }
+  while (m % 2 === 0 && m > 1 && k < 0) { m /= 2; k++; }
+  return exact(m, k);
+}
+const SUP = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+const sup = (n) => String(n).split("").map((c) => SUP[c]).join("");
+function short(v) {                  // compact label for cells and ticks
+  if (v === Infinity) return "∞";
+  if (Number.isNaN(v)) return "NaN";
+  const s = exactOf(v);
+  if (s.length <= 7) return s;
+  if (v < 1) return v.toExponential(2).replace(/\.?0+e/, "e").replace("e-", "e−");
+  return String(Number(v.toPrecision(4)));
+}
+function plain(x) {                  // ordinary JS number, readable
+  if (x === Infinity) return "∞";
+  if (x === -Infinity) return "−∞";
+  if (Number.isNaN(x)) return "NaN";
+  const s = Math.abs(x) >= 1e-6 && Math.abs(x) < 1e15 ? String(x) : x.toExponential();
+  return s.replace("-", "−");
+}
+const signed = (v, s) => (s ? "−" : "") + v;
+function floorLog2(a) {
+  let k = Math.floor(Math.log2(a));
+  while (P2(k) > a) k--;
+  while (P2(k + 1) <= a) k++;
+  return k;
+}
+
+// ---------- State ----------
+const state = { f: FORMATS.e4m3, bits: 0x38, aim: null, zoomK: null, follow: true };
+// aim: { x: number, from: "typed" | "ruler" } — what someone asked for, before rounding
+
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (FORMATS[p.get("f")]) state.f = FORMATS[p.get("f")];
+  const b = parseInt(p.get("b") || "", 16);
+  if (b >= 0 && b <= 255) state.bits = b;
+}
+function writeHash() {
+  const h = `#f=${state.f.id}&b=${state.bits.toString(16).padStart(2, "0").toUpperCase()}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+
+function setBits(bits, { keepAim = false, refit = true } = {}) {
+  state.bits = ((bits % 256) + 256) % 256;
+  if (!keepAim) state.aim = null;
+  if (refit && state.follow) fitZoom();
+  render();
+}
+
+// ---------- Switches ----------
+const swEl = $("switches");
+function buildSwitches() {
+  const { E, F } = state.f;
+  const groups = [["sign", 1, "--sign"], ["exponent", E, "--exp"], ["fraction", F, "--frac"]];
+  let bit = 8, html = "";
+  for (const [name, size, color] of groups) {
+    html += `<div class="grp"><span class="grp-name">${name}</span><span class="grp-val" data-g="${name}"></span><div class="grp-sw">`;
+    for (let i = 0; i < size; i++) {
+      bit--;
+      html += `<button type="button" class="sw" role="switch" data-bit="${bit}" style="--handle: var(${color})"
+        aria-label="${name} bit, bit ${bit}"><span class="lamp"></span><span class="slot"><span class="paddle"></span></span><span class="idx">${bit}</span></button>`;
+    }
+    html += `</div></div>`;
+  }
+  swEl.innerHTML = html;
+}
+let paint = null, pointerToggled = false;
+const bitOn = (bit) => ((state.bits >> bit) & 1) === 1;
+function setBit(bit, on) { if (bitOn(bit) !== on) setBits(state.bits ^ (1 << bit)); }
+swEl.addEventListener("pointerdown", (e) => {
+  const sw = e.target.closest(".sw");
+  if (!sw || e.button !== 0) return;
+  const bit = +sw.dataset.bit;
+  paint = { on: !bitOn(bit) };
+  pointerToggled = true;
+  setBit(bit, paint.on);
+});
+window.addEventListener("pointermove", (e) => {
+  if (!paint) return;
+  const sw = document.elementFromPoint(e.clientX, e.clientY)?.closest(".sw");
+  if (sw) setBit(+sw.dataset.bit, paint.on);
+});
+const endPaint = () => { paint = null; };
+window.addEventListener("pointerup", endPaint);
+window.addEventListener("pointercancel", endPaint);
+swEl.addEventListener("click", (e) => {
+  const sw = e.target.closest(".sw");
+  if (!sw) return;
+  const handled = pointerToggled && e.detail !== 0; // pointer taps were handled on pointerdown
+  pointerToggled = false;
+  if (handled) return;
+  const bit = +sw.dataset.bit;
+  setBit(bit, !bitOn(bit));
+});
+swEl.addEventListener("keydown", (e) => {
+  const sw = e.target.closest(".sw");
+  if (!sw) return;
+  const all = [...swEl.querySelectorAll(".sw")], i = all.indexOf(sw);
+  const next = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: all.length - 1 }[e.key];
+  if (next !== undefined && all[next]) { e.preventDefault(); all[next].focus(); }
+});
+
+// ---------- Equation ----------
+function renderEquation(d) {
+  const f = state.f, sgn = d.s ? "−" : "+";
+  const fracBits = d.frac.toString(2).padStart(f.F, "0");
+  const expBits = d.e.toString(2).padStart(f.E, "0");
+  let eq, why;
+  if (d.kind === "nan") {
+    eq = `<span class="val"><b>NaN</b></span>`;
+    why = `The exponent is all ones and the fraction isn't zero, so this is "not a number." The fraction bits can carry a payload, and the sign doesn't mean anything here.`;
+  } else if (d.kind === "inf") {
+    eq = `<span class="val"><b>${sgn}∞</b></span>`;
+    why = `The exponent is all ones and the fraction is zero, so this is infinity. Anything at or past ${short(f.overflow)} rounds to it.`;
+  } else if (d.kind === "zero") {
+    eq = `<span class="val"><b>${d.s ? "−" : ""}0</b></span>`;
+    why = d.s
+      ? `Negative zero. It equals zero in comparisons, but 1 ÷ −0 is −∞, so the sign is kept.`
+      : `All zeros. The exponent field of zero switches off the hidden 1, so even the fraction can't make this anything but zero.`;
+  } else {
+    const sub = d.kind === "sub", p = sub ? f.emin : d.e - f.bias;
+    eq = `<span class="s">${sgn}</span><span class="m"><span class="hid">${sub ? "0." : "1."}</span>${fracBits}</span><sub>2</sub> × 2<sup class="e">${String(p).replace("-", "−")}</sup>`
+       + ` <span class="val">= <b>${signed(exact(d.m, d.k), d.s)}</b></span>`;
+    why = sub
+      ? `An exponent field of <span class="e">${expBits}</span> means subnormal: no hidden 1, and the exponent is pinned at 1 − ${f.bias} = ${f.emin}. That keeps the steps near zero evenly spaced.`
+      : `The exponent field <span class="e">${expBits}</span> is ${d.e}. Subtract the bias of ${f.bias} to get ${String(p).replace("-", "−")}. The hidden 1 in front of the fraction isn't stored.`;
+  }
+  $("eq").innerHTML = eq;
+  $("why").innerHTML = why;
+
+  const vals = swEl.querySelectorAll(".grp-val");
+  vals[0].textContent = d.s ? "−" : "+";
+  vals[1].textContent = d.e === f.maxE ? "all 1s" : d.e === 0 ? "0" : String(d.e - f.bias).replace("-", "−");
+  vals[2].textContent = `${d.frac}/${P2(f.F)}`;
+  swEl.querySelectorAll(".sw").forEach((sw) => sw.setAttribute("aria-checked", bitOn(+sw.dataset.bit)));
+}
+
+// ---------- Ruler ----------
+const ruler = $("ruler");
+const zoomRange = () => ({ lo: state.f.emin + 1, hi: state.f.emax + 1 });
+function fitZoom() {
+  const d = decode(state.f, state.bits), { lo, hi } = zoomRange();
+  let k;
+  if (d.kind === "nan" || d.kind === "inf") k = hi;
+  else if (d.kind === "zero") k = lo;
+  else k = floorLog2(Math.abs(d.value)) + 1;
+  if (state.aim && Number.isFinite(state.aim.x) && state.aim.x !== 0) k = Math.max(k, floorLog2(Math.abs(state.aim.x)) + 1);
+  state.zoomK = Math.min(hi, Math.max(lo, k));
+}
+function geom() {
+  const w = ruler.clientWidth || 600;
+  return { w, x0: 14, x1: w - 14, R: P2(state.zoomK) };
+}
+const xOf = (g, v) => g.x0 + (v / g.R) * (g.x1 - g.x0);
+
+function renderRuler(d) {
+  const f = state.f, g = geom(), H = 112, axisY = 66, minNormal = P2(f.emin);
+  ruler.setAttribute("viewBox", `0 0 ${g.w} ${H}`);
+  let s = "";
+
+  // Bands, one per power-of-two range, alternating shades. The subnormal range gets its own tint.
+  let hi = g.R, alt = 0;
+  while (hi > minNormal && xOf(g, hi) - xOf(g, hi / 2) >= 1.5) {
+    s += `<rect class="${alt ? "band-b" : "band-a"}" x="${xOf(g, hi / 2)}" y="18" width="${xOf(g, hi) - xOf(g, hi / 2)}" height="${axisY - 18}"/>`;
+    hi /= 2; alt ^= 1;
+  }
+  if (hi <= minNormal) s += `<rect class="band-sub" x="${g.x0}" y="18" width="${xOf(g, Math.min(minNormal, g.R)) - g.x0}" height="${axisY - 18}"/>`;
+
+  // A tick for every float in view. Powers of two get tall ticks.
+  let lastX = -9;
+  for (const v of f.mags) {
+    if (v > g.R) break;
+    const x = Math.round(xOf(g, v)) + .5;
+    if (x === lastX) continue;
+    lastX = x;
+    const isPow = v > 0 && v >= minNormal && P2(floorLog2(v)) === v;
+    s += `<line class="tick${isPow ? " major" : ""}" x1="${x}" x2="${x}" y1="${axisY - (isPow ? 30 : 15)}" y2="${axisY}"/>`;
+  }
+  s += `<line class="axis" x1="${g.x0}" x2="${g.x1}" y1="${axisY + .5}" y2="${axisY + .5}"/>`;
+
+  // Labels at powers of two, from the right edge down, while they have room.
+  s += `<text x="${g.x0}" y="${axisY + 16}" text-anchor="start">0</text>`;
+  let lv = g.R, prevX = Infinity;
+  while (lv >= minNormal / 2) {
+    const x = xOf(g, lv);
+    if (prevX - x < 56 || x - g.x0 < 34) break;
+    s += `<text x="${x}" y="${axisY + 16}" text-anchor="${lv === g.R ? "end" : "middle"}">${short(lv)}</text>`;
+    prevX = x; lv /= 2;
+  }
+
+  // Where someone aimed, and the gap it fell into
+  const aim = state.aim;
+  if (aim && Number.isFinite(aim.x)) {
+    const a = Math.abs(aim.x);
+    if (a <= g.R) {
+      const { below, above } = neighborsOf(a);
+      if (below !== null && above !== null && Number.isFinite(above) && above <= g.R && below !== above) {
+        s += `<line class="gap" x1="${xOf(g, below)}" x2="${xOf(g, above)}" y1="${axisY + 26}" y2="${axisY + 26}"/>`;
+      }
+      const ax = xOf(g, a);
+      s += `<line class="aim" x1="${ax}" x2="${ax}" y1="12" y2="${axisY}"/><circle class="aim-dot" cx="${ax}" cy="${axisY}" r="4"/>`;
+    }
+  }
+
+  // The stored value
+  if (d.kind !== "nan") {
+    const a = Math.abs(d.value);
+    if (a <= g.R) {
+      const x = xOf(g, a);
+      s += `<line class="mark" x1="${x}" x2="${x}" y1="10" y2="${axisY + 4}"/><path class="mark-head" d="M${x - 6} 3 L${x + 6} 3 L${x} 11 Z"/>`;
+    } else {
+      s += `<path class="mark-head" d="M${g.x1 - 9} 4 L${g.x1 + 1} 11 L${g.x1 - 9} 18 Z"/>`;
+      s += `<text class="off" x="${g.x1 - 13}" y="15" text-anchor="end">${d.kind === "inf" ? "∞" : short(a)} is off the end</text>`;
+    }
+  }
+  ruler.innerHTML = s;
+
+  const { lo, hi: kHi } = zoomRange();
+  $("zoomIn").disabled = state.zoomK <= lo;
+  $("zoomOut").disabled = state.zoomK >= kHi;
+  $("follow").setAttribute("aria-pressed", state.follow);
+  $("range").innerHTML = `Showing <b>0</b> to <b>${short(g.R)}</b>`;
+  ruler.setAttribute("aria-valuetext", d.kind === "nan" ? "NaN" : plain(d.value));
+}
+
+function neighborsOf(a) { // nearest floats at or below / at or above a magnitude
+  const f = state.f;
+  if (a > f.max) return { below: f.max, above: Infinity };
+  let below = null, above = null;
+  for (const v of f.mags) {
+    if (v <= a) below = v;
+    if (v >= a) { above = v; break; }
+  }
+  return { below, above };
+}
+
+function renderCaption(d) {
+  const f = state.f, n = P2(f.F), minNormal = P2(f.emin), step0 = P2(f.emin - f.F);
+  let c;
+  if (d.kind === "nan") c = `NaN has no place on the ruler. Every comparison with it is false, even NaN == NaN.`;
+  else if (d.kind === "inf") c = `Infinity sits past the end of the ruler. The largest finite value is ${short(f.max)}, and anything from ${short(f.overflow)} up rounds to infinity.`;
+  else {
+    const a = Math.abs(d.value);
+    if (a < minNormal) {
+      c = `Below the smallest normal number, ${exactOf(minNormal)}, zero and the ${n - 1} subnormals are evenly spaced ${exactOf(step0)} apart. That's the same step as the first normal range, so there's no hole around zero.`;
+    } else {
+      const k = floorLog2(a), lo = P2(k), step = P2(k - f.F);
+      c = `From ${short(lo)} up to ${short(2 * lo)} there are ${n} floats, each ${exactOf(step)} apart.`;
+      c += k === f.emax
+        ? ` This is the top range. Past ${short(f.max)} the next stop is infinity.`
+        : ` The next range is twice as wide and still holds ${n}, so the steps double.`;
+    }
+  }
+  $("caption").textContent = c;
+}
+
+// Dragging along the ruler aims at a value, and the stored value snaps to the nearest float.
+let dragging = false;
+function aimFromPointer(e) {
+  const g = geom(), rect = ruler.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (g.w / rect.width);
+  const t = Math.min(1, Math.max(0, (x - g.x0) / (g.x1 - g.x0)));
+  const a = Number((t * g.R).toPrecision(3));
+  const s = state.bits & 128 ? -1 : 1;
+  state.aim = { x: s * a, from: "ruler" };
+  setBits((state.bits & 128) | (encode(state.f, a) & 127), { keepAim: true, refit: false });
+}
+ruler.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  dragging = true;
+  ruler.setPointerCapture(e.pointerId);
+  aimFromPointer(e);
+});
+ruler.addEventListener("pointermove", (e) => { if (dragging) aimFromPointer(e); });
+ruler.addEventListener("pointerup", () => { dragging = false; });
+ruler.addEventListener("pointercancel", () => { dragging = false; });
+ruler.addEventListener("keydown", (e) => {
+  const mag = state.bits & 127, top = state.f.top - 1;
+  const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+  if (e.key === "Home") { e.preventDefault(); setBits(state.bits & 128); return; }
+  if (e.key === "End") { e.preventDefault(); setBits((state.bits & 128) | top); return; }
+  if (!step) return;
+  e.preventDefault();
+  const next = Math.min(top, Math.max(0, (mag > top ? top : mag) + step));
+  setBits((state.bits & 128) | next);
+});
+
+$("zoomIn").addEventListener("click", () => { state.zoomK--; state.follow = false; render(); });
+$("zoomOut").addEventListener("click", () => { state.zoomK++; state.follow = false; render(); });
+$("follow").addEventListener("click", () => {
+  state.follow = !state.follow;
+  if (state.follow) fitZoom();
+  render();
+});
+new ResizeObserver(() => render()).observe(ruler);
+
+// ---------- Rounding report ----------
+function parseNumber(str) {
+  const t = str.trim().toLowerCase().replace(/[−–]/g, "-").replace(/_/g, "");
+  if (!t) return null;
+  if (/^[+-]?(inf|infinity|∞)$/.test(t)) return t.startsWith("-") ? -Infinity : Infinity;
+  if (t === "nan") return NaN;
+  const frac = t.match(/^([+-]?[\d.]+(?:e[+-]?\d+)?)\s*\/\s*([+-]?[\d.]+(?:e[+-]?\d+)?)$/);
+  if (frac) {
+    const a = Number(frac[1]), b = Number(frac[2]);
+    return Number.isNaN(a) || Number.isNaN(b) || b === 0 ? undefined : a / b;
+  }
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/.test(t)) return undefined;
+  return Number(t);
+}
+$("aimForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const x = parseNumber($("aimInput").value);
+  if (x === null || x === undefined) {
+    $("aimField").classList.add("bad");
+    $("aimMsg").textContent = x === null ? "Enter a number first." : "Enter a number like 0.1, 3/7, 1e-3, or inf.";
+    return;
+  }
+  aimAt(x, $("aimInput").value.trim());
+});
+$("aimInput").addEventListener("input", () => { $("aimField").classList.remove("bad"); $("aimMsg").textContent = ""; });
+
+function aimAt(x, label) {
+  state.aim = { x, from: "typed", label };
+  const bits = encode(state.f, x);
+  state.bits = bits;
+  if (state.follow) fitZoom();
+  render();
+}
+
+function renderReport(d) {
+  const el = $("report"), aim = state.aim, f = state.f;
+  if (!aim) {
+    el.innerHTML = `<p class="empty">Type a number, or drag along the ruler, to see where it rounds to.</p>`;
+    return;
+  }
+  const x = aim.x, hex = "0x" + state.bits.toString(16).padStart(2, "0").toUpperCase();
+  const stored = d.kind === "nan" ? "NaN" : d.kind === "inf" || d.kind === "zero" ? plain(d.value).replace(/^0$/, d.s ? "−0" : "0") : signed(exact(d.m, d.k), d.s);
+  const asked = aim.label && aim.label !== plain(x) && !/^[+-]?(inf|infinity|nan)$/i.test(aim.label) ? `${aim.label} = ${plain(x)}` : plain(x);
+  const rows = [[aim.from === "ruler" ? "Pointed at" : "Asked for", asked], ["Stored as", `${stored} (${hex})`]];
+  let verdict = "";
+  if (Number.isNaN(x)) verdict = "NaN stays NaN.";
+  else if (!Number.isFinite(x)) verdict = "Infinity is one of the patterns, so it's stored exactly.";
+  else {
+    const a = Math.abs(x), { below, above } = neighborsOf(a), v = Math.abs(d.value);
+    if (v === a) verdict = "That one is exactly representable, so nothing was rounded.";
+    else {
+      rows.push(["Between", `${exactOf(below)} and ${Number.isFinite(above) ? exactOf(above) : "∞"}`]);
+      if (Number.isFinite(d.value)) {
+        const err = Math.abs(d.value) - a;
+        rows.push(["Off by", `${err > 0 ? "+" : "−"}${plain(Number(Math.abs(err).toPrecision(3)))}, about ${plain(Number((Math.abs(err) / a * 100).toPrecision(2)))}%`]);
+      }
+      if (d.kind === "inf") verdict = `Too big. The largest value is ${short(f.max)}, and anything from ${short(f.overflow)} up would round past it, so it becomes infinity.`;
+      else if (d.kind === "zero") verdict = `Too small. It's closer to zero than to the smallest subnormal, so it rounds to ${d.s ? "−0" : "0"}.`;
+      else if (Number.isFinite(above) && a - below === above - a) verdict = "It was exactly halfway, so it went to the neighbor whose last fraction bit is 0. That's the “ties to even” rule.";
+      else verdict = "It went to the nearer neighbor.";
+    }
+  }
+  el.innerHTML = `<dl class="report">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl><p class="verdict">${verdict}</p>`;
+}
+
+// ---------- Every pattern ----------
+function buildGrid() {
+  const f = state.f, cols = P2(f.F);
+  let h = `<thead><tr><th scope="col">exp \\ frac</th>`;
+  for (let c = 0; c < cols; c++) h += `<th scope="col">${c.toString(2).padStart(f.F, "0")}</th>`;
+  h += `</tr></thead><tbody>`;
+  for (let r = 0; r <= f.maxE; r++) {
+    const label = r === 0 ? "subnormal" : r === f.maxE ? "special" : `×2${sup(r - f.bias)}`;
+    h += `<tr><th scope="row"><span class="eb">${r.toString(2).padStart(f.E, "0")}</span>${label}</th>`;
+    for (let c = 0; c < cols; c++) {
+      const b = (r << f.F) | c, d = decode(f, b);
+      const text = d.kind === "inf" ? "∞" : d.kind === "nan" ? "NaN" : exact(d.m, d.k);
+      const hex = "0x" + b.toString(16).padStart(2, "0").toUpperCase();
+      h += `<td><button type="button" class="cell ${d.kind}" data-b="${b}" title="${hex}">${text}</button></td>`;
+    }
+    h += `</tr>`;
+  }
+  $("grid").innerHTML = h + `</tbody>`;
+}
+$("grid").addEventListener("click", (e) => {
+  const cell = e.target.closest(".cell");
+  if (cell) setBits((state.bits & 128) | +cell.dataset.b);
+});
+function renderGrid() {
+  const mag = state.bits & 127;
+  $("grid").querySelectorAll(".cell").forEach((c) => c.setAttribute("aria-current", +c.dataset.b === mag));
+  const f = state.f;
+  $("everySub").textContent = `Rows are the ${f.E} exponent bits and columns are the ${f.F} fraction bits, so each row is one power-of-two range. `
+    + `With the sign bit on, every value is the same but negative. Tap one to load it.`;
+}
+
+// ---------- Layout and buttons ----------
+$("layouts").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  state.f = FORMATS[b.dataset.f];
+  if (state.aim) state.bits = encode(state.f, state.aim.x); // keep aiming at the same number
+  buildLayout();
+  if (state.follow || state.zoomK === null) fitZoom();
+  else state.zoomK = Math.min(zoomRange().hi, Math.max(zoomRange().lo, state.zoomK));
+  render();
+});
+function buildLayout() {
+  const f = state.f;
+  document.querySelectorAll("#layouts button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.f === f.id));
+  $("layoutNote").textContent = `${f.E} exponent bits with a bias of ${f.bias}, ${f.F} fraction bits. Largest value ${short(f.max)}, smallest ${exactOf(P2(f.emin - f.F))}.`;
+  buildSwitches();
+  buildGrid();
+}
+
+$("inc").addEventListener("click", () => setBits(state.bits + 1));
+$("dec").addEventListener("click", () => setBits(state.bits - 1));
+$("neg").addEventListener("click", () => {
+  if (state.aim) state.aim = { ...state.aim, x: -state.aim.x, label: null };
+  setBits(state.bits ^ 128, { keepAim: true });
+});
+$("one").addEventListener("click", () => setBits(encode(state.f, 1)));
+
+document.querySelectorAll(".try").forEach((b) => b.addEventListener("click", () => {
+  const f = state.f;
+  state.follow = true;
+  if (b.dataset.try === "walk") { setBits(0); $("inc").focus(); }
+  if (b.dataset.try === "tenth") { $("aimInput").value = "0.1"; aimAt(0.1, "0.1"); }
+  if (b.dataset.try === "max") { setBits(f.top - 1); $("inc").focus(); }
+  if (b.dataset.try === "layouts") { setBits(encode(f, 1)); document.querySelector("#layouts button").focus(); }
+  $("switches").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+}));
+
+// ---------- Render ----------
+function render() {
+  const d = decode(state.f, state.bits);
+  renderEquation(d);
+  renderRuler(d);
+  renderCaption(d);
+  renderReport(d);
+  renderGrid();
+  writeHash();
+}
+
+readHash();
+buildLayout();
+fitZoom();
+render();
+</script>
+</body>
+</html>
