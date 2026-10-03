@@ -4,194 +4,863 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Wave, End to End — a Behringer Wave walkthrough</title>
+<script>
+  // Apply a saved theme choice before first paint so the page doesn't flash.
+  try {
+    var savedTheme = localStorage.getItem("wave-theme");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      document.documentElement.dataset.theme = savedTheme;
+    }
+  } catch (_) {}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{
-  --navy:#0B1230;
-  --ppg:#1F3BA8;
-  --sheet:#EAEDF4;
-  --card:#FFFFFF;
-  --amber:#F5A623;
-  --ink:#0E1428;
-  --mute:#5C6484;
-  --line:#C8CEDE;
-  --rail:280px;
+:root {
+  /* Page */
+  --sheet: #EAEDF4;
+  --card: #FFFFFF;
+  --ink: #0E1428;
+  --ink-soft: #2A3150;
+  --mute: #5C6484;
+  --line: #C8CEDE;
+  --ppg: #1F3BA8;          /* panel blue: links, accents, analog blocks */
+  --on-ppg: #FFFFFF;       /* text drawn on a --ppg fill */
+  --amber: #F5A623;
+  --overlay: rgba(11, 18, 48, .74);
+
+  /* Note callouts */
+  --listen: #0E7C6B;
+  --verify: #B0710C;
+  --warn: #B3243B;
+  --restore: #4A5478;
+
+  /* LCD: the Wave's display, dark in either theme */
+  --navy: #0B1230;
+  --lcd-field: #1A2450;
+  --lcd-edge: #3B4780;
+  --lcd-key: #7F8CC4;
+  --lcd-tag: #8C9AD4;
+  --lcd-cap: #96A0C8;
+
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --rail: 280px;
+  color-scheme: light;
 }
-*{box-sizing:border-box;}
-html{scroll-behavior:smooth;}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;}}
-body{
-  margin:0;background:var(--sheet);color:var(--ink);
-  font-family:"IBM Plex Sans",system-ui,sans-serif;
-  font-size:16.5px;line-height:1.62;-webkit-font-smoothing:antialiased;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sheet: #10142A; --card: #1A1F3A; --ink: #E4E7F2; --ink-soft: #C3C8DC;
+    --mute: #9AA2C2; --line: #2F3657; --ppg: #93A6F2; --on-ppg: #0B1230;
+    --overlay: rgba(0, 0, 0, .72);
+    --listen: #4FC7B0; --verify: #E8A845; --warn: #F2808F; --restore: #A6AFD4;
+    --navy: #080C20; --lcd-field: #161E44;
+    color-scheme: dark;
+  }
 }
-h1,h2,h3,h4{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;}
-code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;}
-
-.wrap{display:flex;align-items:flex-start;max-width:1360px;margin:0 auto;}
-.rail{width:var(--rail);flex:0 0 var(--rail);position:sticky;top:0;height:100vh;overflow-y:auto;padding:34px 22px 40px 28px;border-right:1px solid var(--line);}
-.main{flex:1 1 auto;min-width:0;padding:0 40px 120px;}
-@media(max-width:960px){
-  .wrap{display:block;}
-  .rail{position:static;width:auto;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:20px 20px 24px;}
-  .main{padding:0 20px 80px;}
+:root[data-theme="dark"] {
+  --sheet: #10142A; --card: #1A1F3A; --ink: #E4E7F2; --ink-soft: #C3C8DC;
+  --mute: #9AA2C2; --line: #2F3657; --ppg: #93A6F2; --on-ppg: #0B1230;
+  --overlay: rgba(0, 0, 0, .72);
+  --listen: #4FC7B0; --verify: #E8A845; --warn: #F2808F; --restore: #A6AFD4;
+  --navy: #080C20; --lcd-field: #161E44;
+  color-scheme: dark;
 }
 
-.rail-mark{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--ppg);margin-bottom:20px;}
-.rail a{display:flex;gap:12px;align-items:baseline;text-decoration:none;color:var(--mute);padding:5px 0;font-size:14.5px;line-height:1.35;border-left:2px solid transparent;padding-left:12px;margin-left:-14px;}
-.rail a .n{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500;color:var(--line);flex:0 0 auto;}
-.rail a:hover{color:var(--ink);}
-.rail a.on{color:var(--ppg);border-left-color:var(--ppg);font-weight:600;}
-.rail a.on .n{color:var(--ppg);}
-.rail-group{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);}
+/* ---------------- Base ---------------- */
 
-.rail-part{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:10px;
-  letter-spacing:.2em;text-transform:uppercase;color:var(--mute);margin:16px 0 6px;
-  padding-top:12px;border-top:1px solid var(--line);}
-.rail-part:first-of-type{border-top:0;padding-top:0;}
+* { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
 
-.hero{padding:64px 0 40px;border-bottom:2px solid var(--ink);}
-.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--ppg);margin:0 0 18px;}
-h1{font-size:clamp(38px,6.6vw,74px);line-height:.94;font-weight:700;margin:0 0 22px;letter-spacing:-.02em;text-transform:uppercase;}
-h1 em{font-style:normal;color:var(--ppg);}
-.standfirst{font-size:clamp(17px,2.1vw,20px);max-width:62ch;color:#2A3150;margin:0 0 34px;}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { animation: none !important; transition: none !important; }
+}
 
-.ruler{margin:30px 0 12px;}
-.ruler-cells{display:flex;gap:2px;height:74px;align-items:flex-end;}
-.ruler-cells i{flex:1 1 0;background:var(--ppg);opacity:.30;border-radius:1px 1px 0 0;}
-.ruler-cells i.hi{background:var(--amber);opacity:1;}
-.ruler-legend{display:flex;justify-content:space-between;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--mute);margin-top:8px;letter-spacing:.04em;}
-.ruler-note{font-size:14px;color:var(--mute);max-width:60ch;margin-top:6px;}
+body {
+  margin: 0;
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16.5px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
 
-section{padding:52px 0 8px;border-bottom:1px solid var(--line);}
-section:last-of-type{border-bottom:0;}
-.sec-head{display:flex;gap:18px;align-items:baseline;margin-bottom:6px;}
-.sec-num{font-family:"IBM Plex Mono",monospace;font-size:14px;font-weight:600;color:var(--ppg);flex:0 0 auto;padding-top:6px;}
-h2{font-size:clamp(26px,3.4vw,38px);line-height:1.06;margin:0;font-weight:700;letter-spacing:-.015em;text-transform:uppercase;}
-.goal{font-size:15px;color:var(--mute);margin:2px 0 26px 32px;max-width:64ch;}
-@media(max-width:640px){.goal{margin-left:0;}}
-h3{font-size:17px;margin:30px 0 10px;letter-spacing:.01em;text-transform:uppercase;font-weight:700;}
-p{margin:0 0 15px;max-width:70ch;}
-ul,ol{max-width:70ch;padding-left:20px;margin:0 0 16px;}
-li{margin-bottom:7px;}
-strong{font-weight:600;}
-a{color:var(--ppg);}
+h1, h2, h3, h4 { font-family: var(--cond); }
+code, .mono { font-family: var(--mono); }
 
-.lcd{background:var(--navy);color:var(--amber);border-radius:3px;padding:16px 18px 14px;margin:20px 0;overflow-x:auto;border-left:4px solid var(--ppg);}
-.lcd-tag{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#8C9AD4;margin-bottom:12px;}
-.lcd-row{display:flex;gap:20px;min-width:min-content;}
-.lcd-cell{flex:0 0 auto;text-align:left;}
-.lcd-cell .k{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;color:#7F8CC4;text-transform:uppercase;display:block;margin-bottom:2px;}
-.lcd-cell .v{font-family:"IBM Plex Mono",monospace;font-size:20px;font-weight:500;color:var(--amber);display:block;line-height:1.1;}
-.lcd-cap{font-size:13px;color:#96A0C8;margin-top:12px;font-family:"IBM Plex Sans",sans-serif;line-height:1.5;}
+h1 {
+  font-size: clamp(38px, 6.6vw, 74px);
+  line-height: .94;
+  font-weight: 700;
+  margin: 0 0 22px;
+  letter-spacing: -.02em;
+  text-transform: uppercase;
+}
+h1 em {
+  font-style: normal;
+  color: var(--ppg);
+}
+h2 {
+  font-size: clamp(26px, 3.4vw, 38px);
+  line-height: 1.06;
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  text-transform: uppercase;
+}
+h3 {
+  font-size: 17px;
+  margin: 30px 0 10px;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+h3 .aside {
+  font-weight: 400;
+  text-transform: none;
+  font-size: 14px;
+  color: var(--mute);
+}
+h4 {
+  font-size: 15px;
+  margin: 24px 0 8px;
+}
+#ref h4 {
+  font-size: 14px;
+  margin: 22px 0 6px;
+}
 
-.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:26px 0 10px;}
-.flow .blk{flex:0 1 auto;border-radius:3px;padding:11px 14px;min-width:118px;font-size:14px;line-height:1.35;}
-.flow .blk b{display:block;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:13.5px;letter-spacing:.03em;text-transform:uppercase;}
-.flow .blk span{display:block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;margin-top:3px;letter-spacing:.02em;}
-.flow .dig{background:var(--navy);color:var(--amber);}
-.flow .dig span{color:#7F8CC4;}
-.flow .ana{background:var(--card);color:var(--ink);border:1px solid var(--ppg);}
-.flow .ana span{color:var(--mute);}
-.flow .arw{align-self:center;color:var(--mute);font-family:"IBM Plex Mono",monospace;font-size:16px;}
-.flow-key{display:flex;gap:22px;font-size:12.5px;color:var(--mute);margin-bottom:22px;flex-wrap:wrap;}
-.flow-key i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:6px;vertical-align:-1px;}
-.flow-key .kd{background:var(--navy);}
-.flow-key .ka{background:var(--card);border:1px solid var(--ppg);}
+p { margin: 0 0 15px; max-width: 70ch; }
+ul, ol { max-width: 70ch; padding-left: 20px; margin: 0 0 16px; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+a { color: var(--ppg); }
 
-.sigwrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:4px;
-  padding:18px 16px;margin:18px 0 10px;}
-.sigcap{font-size:14px;color:var(--mute);max-width:68ch;}
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--ppg);
+  outline-offset: 3px;
+}
 
+kbd {
+  font-family: var(--mono);
+  font-size: .86em;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
 
-/* ---- settings check button + modal ---- */
-.sec-head{flex-wrap:wrap;}
-.chk{margin-left:auto;flex:0 0 auto;align-self:center;background:var(--card);border:1px solid var(--ppg);
-  color:var(--ppg);font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:11px;
-  letter-spacing:.14em;text-transform:uppercase;padding:7px 13px;border-radius:2px;cursor:pointer;}
-.chk:hover{background:var(--ppg);color:#fff;}
+/* ---------------- Layout: lesson rail + main column ---------------- */
 
-#ovl{position:fixed;inset:0;background:rgba(11,18,48,.74);display:none;align-items:flex-start;
-  justify-content:center;padding:20px 14px 60px;z-index:50;overflow-y:auto;}
-#ovl.open{display:flex;}
-#mdl{background:var(--sheet);max-width:780px;width:100%;border-radius:4px;
-  box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden;}
-#mdl .mhead{background:var(--navy);padding:15px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
-#mdl .mhead h3{margin:0;color:#fff;font-size:17px;text-transform:uppercase;letter-spacing:.01em;flex:1 1 auto;}
-#mdl select{font-family:"IBM Plex Mono",monospace;font-size:13px;padding:5px 8px;border-radius:2px;
-  border:1px solid #3B4780;background:#1A2450;color:var(--amber);}
-#mdl .x{background:none;border:0;color:#8C9AD4;font-size:24px;line-height:1;cursor:pointer;padding:0 4px;}
-#mdl .x:hover{color:#fff;}
-#mdl .mbody{padding:20px 22px 26px;}
-.mnote{font-size:14.5px;color:#2A3150;margin:0 0 18px;max-width:none;}
-.mdiff{background:var(--card);border-left:3px solid var(--amber);padding:13px 16px;margin:0 0 22px;}
-.mdiff b{display:block;font-family:"IBM Plex Sans Condensed",sans-serif;font-size:11px;letter-spacing:.16em;
-  text-transform:uppercase;color:#B0710C;margin-bottom:7px;}
-.mdiff ul{margin:0;padding-left:18px;font-size:14.5px;}
-.mdiff li{margin-bottom:3px;}
-.mdiff .none{font-size:14.5px;color:var(--mute);margin:0;}
-.mgrp{margin-bottom:20px;}
-.mgrp h4{font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ppg);
-  margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line);}
-.mrows{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:2px 14px;}
-.mrow{display:flex;justify-content:space-between;gap:10px;align-items:baseline;
-  padding:4px 8px;border-left:3px solid transparent;font-size:14px;}
-.mrow .kk{color:var(--mute);}
-.mrow .vv{font-family:"IBM Plex Mono",monospace;font-weight:500;}
-.mrow.diff{background:var(--card);border-left-color:var(--amber);}
-.mrow.diff .kk{color:var(--ink);font-weight:500;}
-.mlegend{font-size:13px;color:var(--mute);margin:4px 0 0;}
+.wrap {
+  display: flex;
+  align-items: flex-start;
+  max-width: 1360px;
+  margin: 0 auto;
+}
+.rail {
+  width: var(--rail);
+  flex: 0 0 var(--rail);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 34px 22px 40px 28px;
+  border-right: 1px solid var(--line);
+}
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 40px 120px;
+}
+@media (max-width: 960px) {
+  .wrap { display: block; }
+  .rail {
+    position: static;
+    width: auto;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 20px 20px 24px;
+  }
+  .main { padding: 0 20px 80px; }
+}
 
-details{margin:8px 0 22px;}
-details summary{cursor:pointer;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;
-  font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ppg);
-  padding:8px 0;border-bottom:1px solid var(--line);list-style:none;}
-details summary::-webkit-details-marker{display:none;}
-details summary::before{content:"\25B8  ";}
-details[open] summary::before{content:"\25BE  ";}
-details table{margin-top:12px;}
+.rail-mark {
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ppg);
+  margin-bottom: 20px;
+}
+.rail a {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  text-decoration: none;
+  color: var(--mute);
+  padding: 5px 0 5px 12px;
+  margin-left: -14px;
+  font-size: 14.5px;
+  line-height: 1.35;
+  border-left: 2px solid transparent;
+}
+.rail a .n {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--line);
+  flex: 0 0 auto;
+}
+.rail a:hover { color: var(--ink); }
+.rail a.on {
+  color: var(--ppg);
+  border-left-color: var(--ppg);
+  font-weight: 600;
+}
+.rail a.on .n { color: var(--ppg); }
+.rail-part {
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin: 16px 0 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.rail-part:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
 
-@media(max-width:520px){.mrows{grid-template-columns:1fr;}}
+/* ---------------- Theme switch ---------------- */
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 22px;
+  padding: 6px 12px 6px 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--mute);
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  color: var(--ink);
+  border-color: var(--mute);
+}
+.theme-toggle .track {
+  position: relative;
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--line);
+  transition: background .15s;
+}
+.theme-toggle .track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--card);
+  transition: transform .15s;
+}
+.theme-toggle[aria-pressed="true"] .track { background: var(--ppg); }
+.theme-toggle[aria-pressed="true"] .track::after { transform: translateX(12px); }
 
-.note{border-left:3px solid var(--ppg);padding:2px 0 2px 16px;margin:18px 0;max-width:68ch;}
-.note .lbl{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ppg);display:block;margin-bottom:3px;}
-.note p{margin:0;font-size:15.5px;}
-.note.listen{border-color:#0E7C6B;} .note.listen .lbl{color:#0E7C6B;}
-.note.verify{border-color:#B0710C;} .note.verify .lbl{color:#B0710C;}
-.note.warn{border-color:#B3243B;} .note.warn .lbl{color:#B3243B;}
-.note.restore{border-color:#4A5478;} .note.restore .lbl{color:#4A5478;}
+/* ---------------- Hero ---------------- */
 
-table{border-collapse:collapse;width:100%;max-width:70ch;margin:18px 0 22px;font-size:15px;}
-table.wide{max-width:100%;}
-th,td{text-align:left;padding:8px 12px 8px 0;border-bottom:1px solid var(--line);vertical-align:top;}
-th{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);border-bottom:1px solid var(--ink);}
-td.n{font-family:"IBM Plex Mono",monospace;white-space:nowrap;font-weight:500;width:1%;padding-right:22px;}
-td.nm{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;white-space:nowrap;padding-right:18px;}
+.hero {
+  padding: 64px 0 40px;
+  border-bottom: 2px solid var(--ink);
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--ppg);
+  margin: 0 0 18px;
+}
+.standfirst {
+  font-size: clamp(17px, 2.1vw, 20px);
+  max-width: 62ch;
+  color: var(--ink-soft);
+  margin: 0 0 34px;
+}
 
-ol.steps{list-style:none;counter-reset:s;padding-left:0;}
-ol.steps>li{counter-increment:s;position:relative;padding-left:38px;margin-bottom:13px;}
-ol.steps>li::before{content:counter(s,decimal-leading-zero);position:absolute;left:0;top:1px;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--ppg);border:1px solid var(--line);border-radius:2px;padding:1px 5px;background:var(--card);}
+.ruler { margin: 30px 0 12px; }
+.ruler-cells {
+  display: flex;
+  gap: 2px;
+  height: 74px;
+  align-items: flex-end;
+}
+.ruler-cells i {
+  flex: 1 1 0;
+  background: var(--ppg);
+  opacity: .30;
+  border-radius: 1px 1px 0 0;
+}
+.ruler-cells i.hi {
+  background: var(--amber);
+  opacity: 1;
+}
+.ruler-legend {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--mute);
+  margin-top: 8px;
+  letter-spacing: .04em;
+}
+.ruler-note {
+  font-size: 14px;
+  color: var(--mute);
+  max-width: 60ch;
+  margin-top: 6px;
+}
 
-.done{display:flex;align-items:center;gap:11px;margin:26px 0 8px;font-size:14px;color:var(--mute);cursor:pointer;user-select:none;width:fit-content;}
-.done input{appearance:none;width:19px;height:19px;border:1.5px solid var(--mute);border-radius:2px;background:var(--card);cursor:pointer;flex:0 0 auto;position:relative;transition:.12s;}
-.done input:checked{background:var(--ppg);border-color:var(--ppg);}
-.done input:checked::after{content:"";position:absolute;left:5.5px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg);}
-.done input:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
-.done:has(input:checked){color:var(--ppg);}
+/* ---------------- Sections ---------------- */
 
-a:focus-visible,button:focus-visible{outline:2px solid var(--ppg);outline-offset:3px;}
-kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card);border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:1px 5px;white-space:nowrap;}
-.foot{padding:44px 0 0;font-size:14px;color:var(--mute);max-width:70ch;}
+section {
+  padding: 52px 0 8px;
+  border-bottom: 1px solid var(--line);
+}
+section:last-of-type { border-bottom: 0; }
+
+.sec-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.sec-num {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ppg);
+  flex: 0 0 auto;
+  padding-top: 6px;
+}
+.goal {
+  font-size: 15px;
+  color: var(--mute);
+  margin: 2px 0 26px 32px;
+  max-width: 64ch;
+}
+@media (max-width: 640px) {
+  .goal { margin-left: 0; }
+}
+
+/* ---------------- LCD panels ---------------- */
+
+.lcd {
+  background: var(--navy);
+  color: var(--amber);
+  border-radius: 3px;
+  padding: 16px 18px 14px;
+  margin: 20px 0;
+  overflow-x: auto;
+  border-left: 4px solid var(--ppg);
+}
+.lcd-tag {
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--lcd-tag);
+  margin-bottom: 12px;
+}
+.lcd-row {
+  display: flex;
+  gap: 20px;
+  min-width: min-content;
+}
+.lcd-row + .lcd-row { margin-top: 14px; }
+.lcd-cell {
+  flex: 0 0 auto;
+  text-align: left;
+}
+.lcd-cell .k {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .12em;
+  color: var(--lcd-key);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+}
+.lcd-cell .v {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--amber);
+  display: block;
+  line-height: 1.1;
+}
+.lcd-cap {
+  font-size: 13px;
+  color: var(--lcd-cap);
+  margin-top: 12px;
+  font-family: var(--sans);
+  line-height: 1.5;
+}
+
+/* ---------------- Block diagram (primer) ---------------- */
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  margin: 26px 0 10px;
+}
+.flow .blk {
+  flex: 0 1 auto;
+  border-radius: 3px;
+  padding: 11px 14px;
+  min-width: 118px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.flow .blk b {
+  display: block;
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.flow .blk span {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  margin-top: 3px;
+  letter-spacing: .02em;
+}
+.flow .dig {
+  background: var(--navy);
+  color: var(--amber);
+  border: 1px solid var(--lcd-edge);
+}
+.flow .dig span { color: var(--lcd-key); }
+.flow .ana {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--ppg);
+}
+.flow .ana span { color: var(--mute); }
+.flow .arw {
+  align-self: center;
+  color: var(--mute);
+  font-family: var(--mono);
+  font-size: 16px;
+}
+.flow-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  font-size: 12.5px;
+  color: var(--mute);
+  margin-bottom: 22px;
+}
+.flow-key i {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+.flow-key .kd { background: var(--navy); border: 1px solid var(--lcd-edge); }
+.flow-key .ka { background: var(--card); border: 1px solid var(--ppg); }
+
+/* ---------------- Signal-flow SVG ---------------- */
+
+.sigwrap {
+  overflow-x: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 18px 16px;
+  margin: 18px 0 10px;
+}
+.sigwrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 860px;
+}
+.sigcap {
+  font-size: 14px;
+  color: var(--mute);
+  max-width: 68ch;
+}
+
+.sigwrap .t-cond { font-family: var(--cond); }
+.sigwrap .t-mono { font-family: var(--mono); }
+.sigwrap .t-sans { font-family: var(--sans); }
+
+.sigwrap .fill-card  { fill: var(--card); }
+.sigwrap .fill-ink   { fill: var(--ink); }
+.sigwrap .fill-mute  { fill: var(--mute); }
+.sigwrap .fill-ppg   { fill: var(--ppg); }
+.sigwrap .fill-amber { fill: var(--amber); }
+.sigwrap .fill-navy  { fill: var(--navy); }
+.sigwrap .fill-field { fill: var(--lcd-field); }
+.sigwrap .fill-key   { fill: var(--lcd-key); }
+
+.sigwrap .stroke-line { stroke: var(--line); }
+.sigwrap .stroke-ink  { stroke: var(--ink); }
+.sigwrap .stroke-ppg  { stroke: var(--ppg); }
+.sigwrap .stroke-navy { stroke: var(--navy); }
+
+/* ---------------- Notes ---------------- */
+
+.note {
+  border-left: 3px solid var(--ppg);
+  padding: 2px 0 2px 16px;
+  margin: 18px 0;
+  max-width: 68ch;
+}
+.note .lbl {
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ppg);
+  display: block;
+  margin-bottom: 3px;
+}
+.note p { margin: 0; font-size: 15.5px; }
+.note.listen  { border-color: var(--listen); }
+.note.listen .lbl  { color: var(--listen); }
+.note.verify  { border-color: var(--verify); }
+.note.verify .lbl  { color: var(--verify); }
+.note.warn    { border-color: var(--warn); }
+.note.warn .lbl    { color: var(--warn); }
+.note.restore { border-color: var(--restore); }
+.note.restore .lbl { color: var(--restore); }
+
+/* ---------------- Tables ---------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 70ch;
+  margin: 18px 0 22px;
+  font-size: 15px;
+}
+table.wide { max-width: 100%; }
+th, td {
+  text-align: left;
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+th {
+  font-family: var(--cond);
+  font-size: 11.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--mute);
+  border-bottom: 1px solid var(--ink);
+}
+td.n {
+  font-family: var(--mono);
+  white-space: nowrap;
+  font-weight: 500;
+  width: 1%;
+  padding-right: 22px;
+}
+td.nm {
+  font-family: var(--cond);
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 18px;
+}
+
+details { margin: 8px 0 22px; }
+details summary {
+  cursor: pointer;
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ppg);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  list-style: none;
+}
+details summary::-webkit-details-marker { display: none; }
+details summary::before { content: "\25B8  "; }
+details[open] summary::before { content: "\25BE  "; }
+details table { margin-top: 12px; }
+
+/* ---------------- Numbered steps ---------------- */
+
+ol.steps {
+  list-style: none;
+  counter-reset: s;
+  padding-left: 0;
+}
+ol.steps > li {
+  counter-increment: s;
+  position: relative;
+  padding-left: 38px;
+  margin-bottom: 13px;
+}
+ol.steps > li::before {
+  content: counter(s, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ppg);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 1px 5px;
+  background: var(--card);
+}
+
+/* ---------------- "Done" checkboxes ---------------- */
+
+.done {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 26px 0 8px;
+  font-size: 14px;
+  color: var(--mute);
+  cursor: pointer;
+  user-select: none;
+  width: fit-content;
+}
+.done input {
+  appearance: none;
+  width: 19px;
+  height: 19px;
+  border: 1.5px solid var(--mute);
+  border-radius: 2px;
+  background: var(--card);
+  cursor: pointer;
+  flex: 0 0 auto;
+  position: relative;
+  transition: .12s;
+}
+.done input:checked {
+  background: var(--ppg);
+  border-color: var(--ppg);
+}
+.done input:checked::after {
+  content: "";
+  position: absolute;
+  left: 5.5px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--on-ppg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(42deg);
+}
+.done input:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+.done:has(input:checked) { color: var(--ppg); }
+
+/* ---------------- Settings button + modal ---------------- */
+
+.chk {
+  margin-left: auto;
+  flex: 0 0 auto;
+  align-self: center;
+  background: var(--card);
+  border: 1px solid var(--ppg);
+  color: var(--ppg);
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  padding: 7px 13px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.chk:hover {
+  background: var(--ppg);
+  color: var(--on-ppg);
+}
+h3 .chk {
+  margin-left: 12px;
+  vertical-align: middle;
+}
+
+#ovl {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px 14px 60px;
+  z-index: 50;
+  overflow-y: auto;
+}
+#ovl.open { display: flex; }
+#mdl {
+  background: var(--sheet);
+  max-width: 780px;
+  width: 100%;
+  border-radius: 4px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .4);
+  overflow: hidden;
+}
+#mdl .mhead {
+  background: var(--navy);
+  padding: 15px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+#mdl .mhead h3 {
+  margin: 0;
+  color: #FFFFFF;
+  font-size: 17px;
+  text-transform: uppercase;
+  letter-spacing: .01em;
+  flex: 1 1 auto;
+}
+#mdl select {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--lcd-edge);
+  background: var(--lcd-field);
+  color: var(--amber);
+}
+#mdl .x {
+  background: none;
+  border: 0;
+  color: var(--lcd-tag);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+#mdl .x:hover { color: #FFFFFF; }
+#mdl .mbody { padding: 20px 22px 26px; }
+
+.mnote {
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  margin: 0 0 18px;
+  max-width: none;
+}
+.mdiff {
+  background: var(--card);
+  border-left: 3px solid var(--amber);
+  padding: 13px 16px;
+  margin: 0 0 22px;
+}
+.mdiff b {
+  display: block;
+  font-family: var(--cond);
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--verify);
+  margin-bottom: 7px;
+}
+.mdiff ul { margin: 0; padding-left: 18px; font-size: 14.5px; }
+.mdiff li { margin-bottom: 3px; }
+.mdiff .none { font-size: 14.5px; color: var(--mute); margin: 0; }
+
+.mgrp { margin-bottom: 20px; }
+.mgrp h4 {
+  font-size: 11.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ppg);
+  margin: 0 0 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--line);
+}
+.mrows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 2px 14px;
+}
+@media (max-width: 520px) {
+  .mrows { grid-template-columns: 1fr; }
+}
+.mrow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  padding: 4px 8px;
+  border-left: 3px solid transparent;
+  font-size: 14px;
+}
+.mrow .kk { color: var(--mute); }
+.mrow .vv { font-family: var(--mono); font-weight: 500; }
+.mrow.diff {
+  background: var(--card);
+  border-left-color: var(--amber);
+}
+.mrow.diff .kk { color: var(--ink); font-weight: 500; }
+.mlegend { font-size: 13px; color: var(--mute); margin: 4px 0 0; }
+
+.foot {
+  padding: 44px 0 0;
+  font-size: 14px;
+  color: var(--mute);
+  max-width: 70ch;
+}
 </style>
+
 </head>
 <body>
 <div class="wrap">
 
 <nav class="rail" aria-label="Lessons">
+  <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">
+    <span class="track" aria-hidden="true"></span>Dark mode
+  </button>
   <div class="rail-mark">The Wave, End to End</div>
   <div class="rail-part">Orientation</div>
   <a href="#primer"><span class="n">—</span><span>How the Wave makes a sound</span></a>
@@ -284,7 +953,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   <h3>What moves the position</h3>
   <p>Three envelopes and an LFO, with fixed default assignments rather than a free modulation matrix. Depth for each is set by its own knob.</p>
 
-  <h4 style="font-size:15px;margin:24px 0 8px;">What an envelope is, and what ADSR and AD mean</h4>
+  <h4>What an envelope is, and what ADSR and AD mean</h4>
   <p>An envelope generator produces a control voltage that rises and falls each time you press a key, used to make a parameter change over the life of a note. Two of the Wave’s three have four stages:</p>
   <table>
     <tr><td class="n">A</td><td class="nm">Attack</td><td>How long to climb from nothing to full after the key goes down.</td></tr>
@@ -312,100 +981,100 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   </table>
   <p>Beyond those, wave position can also be driven by the keyboard, the mod wheel, the bend wheel, aftertouch and an expression pedal. All of it is switched on in the Digital menu with two-letter codes: source letter, then destination letter.</p>
 
-  <h4 style="font-size:15px;margin:26px 0 8px;">The whole voice, including modulation</h4>
+  <h4>The whole voice, including modulation</h4>
   <p>The audio path along the bottom is the same one from the top of this page. Above each stage sits everything that can modulate it — which is the complete picture of what the Digital and Tuning menus are for.</p>
   <div class="sigwrap">
-<svg viewBox="0 0 900 520" role="img" aria-labelledby="sigttl sigdesc" style="width:100%;height:auto;min-width:860px;display:block">
+<svg viewBox="0 0 900 520" role="img" aria-labelledby="sigttl sigdesc">
 <title id="sigttl">Complete signal and modulation flow of one Wave voice</title>
 <desc id="sigdesc">The audio path runs from two digital oscillators through a DAC into the analog filter and amplifier. Above each stage, a panel lists every modulation source that can reach it.</desc>
-<rect x="8" y="8" width="260" height="150" rx="3" fill="#FFFFFF" stroke="#C8CEDE"/>
-<rect x="8" y="8" width="4" height="150" fill="#F5A623"/>
-<text x="22" y="30" font-family="IBM Plex Sans Condensed,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#1F3BA8">PITCH &amp; WAVE POSITION</text>
-<text x="22" y="52" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="600" fill="#0E1428">ENV1 ▸ WAVES  —  EG1</text>
-<text x="22" y="69" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">EG3 → sub osc, when SW 2</text>
-<text x="22" y="86" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">KW keyboard · MW LFO + wheel</text>
-<text x="22" y="103" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">TW aftertouch · BD 3,6,7 · Ped 4</text>
-<line x1="22" y1="109" x2="254" y2="109" stroke="#C8CEDE"/>
-<text x="22" y="125" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">PITCH: DETU · SEMIT · EO/ES (EG3)</text>
-<text x="22" y="142" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">MO/MS (LFO) · BD 1,4,5,6</text>
-<rect x="372" y="8" width="212" height="150" rx="3" fill="#FFFFFF" stroke="#C8CEDE"/>
-<rect x="372" y="8" width="4" height="150" fill="#F5A623"/>
-<text x="386" y="30" font-family="IBM Plex Sans Condensed,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#1F3BA8">FILTER CUTOFF</text>
-<text x="386" y="52" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="600" fill="#0E1428">ENV1 ▸ VCF  —  EG1</text>
-<text x="386" y="69" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">KF keyboard</text>
-<text x="386" y="86" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">MF LFO + wheel</text>
-<text x="386" y="103" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">VF velocity · TF aftertouch</text>
-<text x="386" y="120" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">BD 2,5,7 · Ped 2</text>
-<line x1="386" y1="126" x2="570" y2="126" stroke="#C8CEDE"/>
-<text x="386" y="142" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">EMPHASIS: MF 3 · Ped 3</text>
-<rect x="600" y="8" width="292" height="150" rx="3" fill="#FFFFFF" stroke="#C8CEDE"/>
-<rect x="600" y="8" width="4" height="150" fill="#F5A623"/>
-<text x="614" y="30" font-family="IBM Plex Sans Condensed,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#1F3BA8">LOUDNESS</text>
-<text x="614" y="52" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="600" fill="#0E1428">ENV2 ▸ LOUDNESS  —  EG2</text>
-<text x="614" y="69" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">KL keyboard · ML LFO</text>
-<text x="614" y="86" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">VL velocity · TL aftertouch</text>
-<text x="614" y="103" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">Ped 1</text>
-<line x1="614" y1="109" x2="878" y2="109" stroke="#C8CEDE"/>
-<text x="614" y="125" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">EG2 gates the whole voice — nothing</text>
-<text x="614" y="142" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="400" fill="#5C6484">else is audible unless it is open.</text>
-<line x1="138" y1="158" x2="138" y2="188" stroke="#1F3BA8" stroke-width="1.6" stroke-dasharray="4 3"/>
-<path d="M 133 188 L 143 188 L 138 196 Z" fill="#1F3BA8"/>
-<line x1="478" y1="158" x2="478" y2="188" stroke="#1F3BA8" stroke-width="1.6" stroke-dasharray="4 3"/>
-<path d="M 473 188 L 483 188 L 478 196 Z" fill="#1F3BA8"/>
-<line x1="746" y1="158" x2="746" y2="188" stroke="#1F3BA8" stroke-width="1.6" stroke-dasharray="4 3"/>
-<path d="M 741 188 L 751 188 L 746 196 Z" fill="#1F3BA8"/>
-<rect x="8" y="196" width="260" height="118" rx="3" fill="#0B1230" stroke="#0B1230"/>
-<text x="20" y="216" font-family="IBM Plex Sans Condensed,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#7F8CC4">OSCILLATORS</text>
-<rect x="20" y="226" width="236" height="32" rx="2" fill="#1A2450"/>
-<text x="32" y="247" font-family="IBM Plex Sans Condensed,sans-serif" font-size="13" font-weight="700" fill="#F5A623">MAIN OSC</text>
-<text x="244" y="247" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#7F8CC4">WAVES-OSC</text>
-<rect x="20" y="264" width="236" height="32" rx="2" fill="#1A2450"/>
-<text x="32" y="285" font-family="IBM Plex Sans Condensed,sans-serif" font-size="13" font-weight="700" fill="#F5A623">SUB OSC</text>
-<text x="244" y="285" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="#7F8CC4">WAVES-SUB</text>
-<text x="20" y="308" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#7F8CC4">SW: partner / sync / ring mod / noise / off</text>
-<rect x="284" y="226" width="72" height="58" rx="3" fill="#0B1230" stroke="#0B1230"/>
-<text x="320.0" y="254" text-anchor="middle" font-family="IBM Plex Sans Condensed,sans-serif" font-size="14" font-weight="700" letter-spacing="1.1" fill="#F5A623">DAC</text>
-<text x="320.0" y="272" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#7F8CC4">8/16 bit</text>
-<rect x="372" y="226" width="212" height="58" rx="3" fill="#FFFFFF" stroke="#1F3BA8"/>
-<text x="478.0" y="254" text-anchor="middle" font-family="IBM Plex Sans Condensed,sans-serif" font-size="14" font-weight="700" letter-spacing="1.1" fill="#0E1428">VCF</text>
-<text x="478.0" y="272" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#5C6484">24 dB low-pass · SSM2044</text>
-<rect x="600" y="226" width="160" height="58" rx="3" fill="#FFFFFF" stroke="#1F3BA8"/>
-<text x="680.0" y="260.0" text-anchor="middle" font-family="IBM Plex Sans Condensed,sans-serif" font-size="14" font-weight="700" letter-spacing="1.1" fill="#0E1428">VCA</text>
-<rect x="776" y="226" width="116" height="58" rx="3" fill="#FFFFFF" stroke="#1F3BA8"/>
-<text x="834.0" y="254" text-anchor="middle" font-family="IBM Plex Sans Condensed,sans-serif" font-size="14" font-weight="700" letter-spacing="1.1" fill="#0E1428">OUT</text>
-<text x="834.0" y="272" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="#5C6484">× 8 voices</text>
-<line x1="268" y1="255" x2="275" y2="255" stroke="#0E1428" stroke-width="2.4"/>
-<path d="M 275 249.5 L 275 260.5 L 284 255 Z" fill="#0E1428"/>
-<line x1="356" y1="255" x2="363" y2="255" stroke="#0E1428" stroke-width="2.4"/>
-<path d="M 363 249.5 L 363 260.5 L 372 255 Z" fill="#0E1428"/>
-<line x1="584" y1="255" x2="591" y2="255" stroke="#0E1428" stroke-width="2.4"/>
-<path d="M 591 249.5 L 591 260.5 L 600 255 Z" fill="#0E1428"/>
-<line x1="760" y1="255" x2="767" y2="255" stroke="#0E1428" stroke-width="2.4"/>
-<path d="M 767 249.5 L 767 260.5 L 776 255 Z" fill="#0E1428"/>
-<line x1="8" y1="344" x2="356" y2="344" stroke="#0B1230" stroke-width="3"/>
-<text x="8" y="364" font-family="IBM Plex Sans Condensed,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#0B1230">DIGITAL — SET IN THE MENUS</text>
-<line x1="372" y1="344" x2="892" y2="344" stroke="#1F3BA8" stroke-width="3"/>
-<text x="372" y="364" font-family="IBM Plex Sans Condensed,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#1F3BA8">ANALOG — SET WITH KNOBS</text>
-<rect x="8" y="392" width="884" height="94" rx="3" fill="#FFFFFF" stroke="#C8CEDE"/>
-<rect x="8" y="392" width="4" height="94" fill="#1F3BA8"/>
-<text x="22" y="412" font-family="IBM Plex Sans Condensed,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#1F3BA8">THE THREE ENVELOPES — WHERE EACH ONE GOES</text>
-<text x="24" y="434" font-family="IBM Plex Sans Condensed,sans-serif" font-size="13" font-weight="700" fill="#0E1428">EG1</text>
-<text x="58" y="434" font-family="IBM Plex Mono,monospace" font-size="10" fill="#5C6484">ADSR</text>
-<text x="94" y="434" font-family="IBM Plex Mono,monospace" font-size="10" fill="#5C6484">always</text>
-<text x="178" y="434" font-family="IBM Plex Sans,sans-serif" font-size="11.5" fill="#5C6484">Filter cutoff and wave position at once, depths set by ENV1 ▸ VCF and ENV1 ▸ WAVES. One shape, two destinations.</text>
-<text x="24" y="456" font-family="IBM Plex Sans Condensed,sans-serif" font-size="13" font-weight="700" fill="#0E1428">EG2</text>
-<text x="58" y="456" font-family="IBM Plex Mono,monospace" font-size="10" fill="#5C6484">ADSR</text>
-<text x="94" y="456" font-family="IBM Plex Mono,monospace" font-size="10" fill="#5C6484">always</text>
-<text x="178" y="456" font-family="IBM Plex Sans,sans-serif" font-size="11.5" fill="#5C6484">Loudness, depth set by ENV2 ▸ LOUDNESS. Gates the voice, so it decides how much of any other envelope you hear.</text>
-<text x="24" y="478" font-family="IBM Plex Sans Condensed,sans-serif" font-size="13" font-weight="700" fill="#0E1428">EG3</text>
-<text x="58" y="478" font-family="IBM Plex Mono,monospace" font-size="10" fill="#F5A623">AD</text>
-<text x="94" y="478" font-family="IBM Plex Mono,monospace" font-size="10" fill="#5C6484">if routed</text>
-<text x="178" y="478" font-family="IBM Plex Sans,sans-serif" font-size="11.5" fill="#0E1428">Nothing by default. EO/ES in Tuning sends it to pitch; SW 2 sends it to the sub oscillator’s wave position, depth ENV 3 ATT.</text>
-<line x1="8" y1="506" x2="34" y2="506" stroke="#0E1428" stroke-width="2.4"/>
-<text x="42" y="510" font-family="IBM Plex Sans,sans-serif" font-size="11.5" fill="#5C6484">audio</text>
-<line x1="96" y1="506" x2="122" y2="506" stroke="#1F3BA8" stroke-width="1.6" stroke-dasharray="4 3"/>
-<text x="130" y="510" font-family="IBM Plex Sans,sans-serif" font-size="11.5" fill="#5C6484">modulation</text>
-<text x="230" y="510" font-family="IBM Plex Sans,sans-serif" font-size="11.5" fill="#5C6484">Two-letter codes are Digital menu settings; Ped is the expression pedal; BD numbers are bend destinations.</text>
+<rect class="fill-card stroke-line" x="8" y="8" width="260" height="150" rx="3"/>
+<rect class="fill-amber" x="8" y="8" width="4" height="150"/>
+<text class="t-cond fill-ppg" x="22" y="30" font-size="11.5" font-weight="700" letter-spacing="1.6">PITCH &amp; WAVE POSITION</text>
+<text class="t-mono fill-ink" x="22" y="52" font-size="10.5" font-weight="600">ENV1 ▸ WAVES  —  EG1</text>
+<text class="t-mono fill-mute" x="22" y="69" font-size="10.5" font-weight="400">EG3 → sub osc, when SW 2</text>
+<text class="t-mono fill-mute" x="22" y="86" font-size="10.5" font-weight="400">KW keyboard · MW LFO + wheel</text>
+<text class="t-mono fill-mute" x="22" y="103" font-size="10.5" font-weight="400">TW aftertouch · BD 3,6,7 · Ped 4</text>
+<line class="stroke-line" x1="22" y1="109" x2="254" y2="109"/>
+<text class="t-mono fill-mute" x="22" y="125" font-size="10.5" font-weight="400">PITCH: DETU · SEMIT · EO/ES (EG3)</text>
+<text class="t-mono fill-mute" x="22" y="142" font-size="10.5" font-weight="400">MO/MS (LFO) · BD 1,4,5,6</text>
+<rect class="fill-card stroke-line" x="372" y="8" width="212" height="150" rx="3"/>
+<rect class="fill-amber" x="372" y="8" width="4" height="150"/>
+<text class="t-cond fill-ppg" x="386" y="30" font-size="11.5" font-weight="700" letter-spacing="1.6">FILTER CUTOFF</text>
+<text class="t-mono fill-ink" x="386" y="52" font-size="10.5" font-weight="600">ENV1 ▸ VCF  —  EG1</text>
+<text class="t-mono fill-mute" x="386" y="69" font-size="10.5" font-weight="400">KF keyboard</text>
+<text class="t-mono fill-mute" x="386" y="86" font-size="10.5" font-weight="400">MF LFO + wheel</text>
+<text class="t-mono fill-mute" x="386" y="103" font-size="10.5" font-weight="400">VF velocity · TF aftertouch</text>
+<text class="t-mono fill-mute" x="386" y="120" font-size="10.5" font-weight="400">BD 2,5,7 · Ped 2</text>
+<line class="stroke-line" x1="386" y1="126" x2="570" y2="126"/>
+<text class="t-mono fill-mute" x="386" y="142" font-size="10.5" font-weight="400">EMPHASIS: MF 3 · Ped 3</text>
+<rect class="fill-card stroke-line" x="600" y="8" width="292" height="150" rx="3"/>
+<rect class="fill-amber" x="600" y="8" width="4" height="150"/>
+<text class="t-cond fill-ppg" x="614" y="30" font-size="11.5" font-weight="700" letter-spacing="1.6">LOUDNESS</text>
+<text class="t-mono fill-ink" x="614" y="52" font-size="10.5" font-weight="600">ENV2 ▸ LOUDNESS  —  EG2</text>
+<text class="t-mono fill-mute" x="614" y="69" font-size="10.5" font-weight="400">KL keyboard · ML LFO</text>
+<text class="t-mono fill-mute" x="614" y="86" font-size="10.5" font-weight="400">VL velocity · TL aftertouch</text>
+<text class="t-mono fill-mute" x="614" y="103" font-size="10.5" font-weight="400">Ped 1</text>
+<line class="stroke-line" x1="614" y1="109" x2="878" y2="109"/>
+<text class="t-mono fill-mute" x="614" y="125" font-size="10.5" font-weight="400">EG2 gates the whole voice — nothing</text>
+<text class="t-mono fill-mute" x="614" y="142" font-size="10.5" font-weight="400">else is audible unless it is open.</text>
+<line class="stroke-ppg" x1="138" y1="158" x2="138" y2="188" stroke-width="1.6" stroke-dasharray="4 3"/>
+<path class="fill-ppg" d="M 133 188 L 143 188 L 138 196 Z"/>
+<line class="stroke-ppg" x1="478" y1="158" x2="478" y2="188" stroke-width="1.6" stroke-dasharray="4 3"/>
+<path class="fill-ppg" d="M 473 188 L 483 188 L 478 196 Z"/>
+<line class="stroke-ppg" x1="746" y1="158" x2="746" y2="188" stroke-width="1.6" stroke-dasharray="4 3"/>
+<path class="fill-ppg" d="M 741 188 L 751 188 L 746 196 Z"/>
+<rect class="fill-navy stroke-navy" x="8" y="196" width="260" height="118" rx="3"/>
+<text class="t-cond fill-key" x="20" y="216" font-size="11" font-weight="700" letter-spacing="1.6">OSCILLATORS</text>
+<rect class="fill-field" x="20" y="226" width="236" height="32" rx="2"/>
+<text class="t-cond fill-amber" x="32" y="247" font-size="13" font-weight="700">MAIN OSC</text>
+<text class="t-mono fill-key" x="244" y="247" text-anchor="end" font-size="10">WAVES-OSC</text>
+<rect class="fill-field" x="20" y="264" width="236" height="32" rx="2"/>
+<text class="t-cond fill-amber" x="32" y="285" font-size="13" font-weight="700">SUB OSC</text>
+<text class="t-mono fill-key" x="244" y="285" text-anchor="end" font-size="10">WAVES-SUB</text>
+<text class="t-mono fill-key" x="20" y="308" font-size="9.5">SW: partner / sync / ring mod / noise / off</text>
+<rect class="fill-navy stroke-navy" x="284" y="226" width="72" height="58" rx="3"/>
+<text class="t-cond fill-amber" x="320.0" y="254" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="1.1">DAC</text>
+<text class="t-mono fill-key" x="320.0" y="272" text-anchor="middle" font-size="10">8/16 bit</text>
+<rect class="fill-card stroke-ppg" x="372" y="226" width="212" height="58" rx="3"/>
+<text class="t-cond fill-ink" x="478.0" y="254" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="1.1">VCF</text>
+<text class="t-mono fill-mute" x="478.0" y="272" text-anchor="middle" font-size="10">24 dB low-pass · SSM2044</text>
+<rect class="fill-card stroke-ppg" x="600" y="226" width="160" height="58" rx="3"/>
+<text class="t-cond fill-ink" x="680.0" y="260.0" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="1.1">VCA</text>
+<rect class="fill-card stroke-ppg" x="776" y="226" width="116" height="58" rx="3"/>
+<text class="t-cond fill-ink" x="834.0" y="254" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="1.1">OUT</text>
+<text class="t-mono fill-mute" x="834.0" y="272" text-anchor="middle" font-size="10">× 8 voices</text>
+<line class="stroke-ink" x1="268" y1="255" x2="275" y2="255" stroke-width="2.4"/>
+<path class="fill-ink" d="M 275 249.5 L 275 260.5 L 284 255 Z"/>
+<line class="stroke-ink" x1="356" y1="255" x2="363" y2="255" stroke-width="2.4"/>
+<path class="fill-ink" d="M 363 249.5 L 363 260.5 L 372 255 Z"/>
+<line class="stroke-ink" x1="584" y1="255" x2="591" y2="255" stroke-width="2.4"/>
+<path class="fill-ink" d="M 591 249.5 L 591 260.5 L 600 255 Z"/>
+<line class="stroke-ink" x1="760" y1="255" x2="767" y2="255" stroke-width="2.4"/>
+<path class="fill-ink" d="M 767 249.5 L 767 260.5 L 776 255 Z"/>
+<line class="stroke-ink" x1="8" y1="344" x2="356" y2="344" stroke-width="3"/>
+<text class="t-cond fill-ink" x="8" y="364" font-size="11" font-weight="700" letter-spacing="1.6">DIGITAL — SET IN THE MENUS</text>
+<line class="stroke-ppg" x1="372" y1="344" x2="892" y2="344" stroke-width="3"/>
+<text class="t-cond fill-ppg" x="372" y="364" font-size="11" font-weight="700" letter-spacing="1.6">ANALOG — SET WITH KNOBS</text>
+<rect class="fill-card stroke-line" x="8" y="392" width="884" height="94" rx="3"/>
+<rect class="fill-ppg" x="8" y="392" width="4" height="94"/>
+<text class="t-cond fill-ppg" x="22" y="412" font-size="11.5" font-weight="700" letter-spacing="1.6">THE THREE ENVELOPES — WHERE EACH ONE GOES</text>
+<text class="t-cond fill-ink" x="24" y="434" font-size="13" font-weight="700">EG1</text>
+<text class="t-mono fill-mute" x="58" y="434" font-size="10">ADSR</text>
+<text class="t-mono fill-mute" x="94" y="434" font-size="10">always</text>
+<text class="t-sans fill-mute" x="178" y="434" font-size="11.5">Filter cutoff and wave position at once, depths set by ENV1 ▸ VCF and ENV1 ▸ WAVES. One shape, two destinations.</text>
+<text class="t-cond fill-ink" x="24" y="456" font-size="13" font-weight="700">EG2</text>
+<text class="t-mono fill-mute" x="58" y="456" font-size="10">ADSR</text>
+<text class="t-mono fill-mute" x="94" y="456" font-size="10">always</text>
+<text class="t-sans fill-mute" x="178" y="456" font-size="11.5">Loudness, depth set by ENV2 ▸ LOUDNESS. Gates the voice, so it decides how much of any other envelope you hear.</text>
+<text class="t-cond fill-ink" x="24" y="478" font-size="13" font-weight="700">EG3</text>
+<text class="t-mono fill-amber" x="58" y="478" font-size="10">AD</text>
+<text class="t-mono fill-mute" x="94" y="478" font-size="10">if routed</text>
+<text class="t-sans fill-ink" x="178" y="478" font-size="11.5">Nothing by default. EO/ES in Tuning sends it to pitch; SW 2 sends it to the sub oscillator’s wave position, depth ENV 3 ATT.</text>
+<line class="stroke-ink" x1="8" y1="506" x2="34" y2="506" stroke-width="2.4"/>
+<text class="t-sans fill-mute" x="42" y="510" font-size="11.5">audio</text>
+<line class="stroke-ppg" x1="96" y1="506" x2="122" y2="506" stroke-width="1.6" stroke-dasharray="4 3"/>
+<text class="t-sans fill-mute" x="130" y="510" font-size="11.5">modulation</text>
+<text class="t-sans fill-mute" x="230" y="510" font-size="11.5">Two-letter codes are Digital menu settings; Ped is the expression pedal; BD numbers are bend destinations.</text>
 </svg>
   </div>
   <p class="sigcap">Read it as three destinations. Wave position and pitch shape what the oscillators produce; cutoff shapes what survives the filter; loudness shapes what comes out. Almost every source can reach all three, and the two-letter code is just which pair you’re connecting.</p>
@@ -536,7 +1205,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <p class="lcd-cap">WAVE 000 is Harmonic Bliss, the most legible table to learn on. KEYB 0 is plain 8-voice poly. Press the Group button until only the <strong>A</strong> LED is lit, so edits land on Group A and Group A is what sounds.</p>
   </div>
 
-  <h3>User menu <span style="font-weight:400;text-transform:none;font-size:14px;color:var(--mute);">— press Program twice</span></h3>
+  <h3>User menu <span class="aside">— press Program twice</span></h3>
   <div class="lcd">
     <div class="lcd-tag">User · global, not part of a patch</div>
     <div class="lcd-row">
@@ -562,7 +1231,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">MF</span><span class="v">0</span></span>
       <span class="lcd-cell"><span class="k">ML</span><span class="v">0</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">BD</span><span class="v">0</span></span>
       <span class="lcd-cell"><span class="k">BI</span><span class="v">0</span></span>
       <span class="lcd-cell"><span class="k">TW</span><span class="v">0</span></span>
@@ -904,16 +1573,16 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   <h3>E — up and down, in rhythm</h3>
   <p>Everything so far sweeps <em>up</em> the table and falls back. Three ways to make the wave position rise and fall repeatedly, and the choice comes down to whether it should be locked to tempo.</p>
 
-  <h4 style="font-size:15px;margin:22px 0 8px;">Free-running — the LFO</h4>
+  <h4>Free-running — the LFO</h4>
   <p>Set <strong>MW 6</strong>, <strong>LFO Waveshape 00</strong> (triangle), <strong>LFO Rate 20</strong>, with <strong>UW 2</strong> and <strong>Waves Osc 10</strong> so it has room to travel. A triangle is literally up then down, forever.</p>
   <p>Now turn the Waveshape to the top of its range for the square. Instead of gliding, the timbre snaps between two positions — far more rhythmic-sounding, and a classic of the instrument.</p>
   <p>The limitation: the LFO is not synced to the sequencer or to anything else. You can tune the rate by ear to sit near a tempo, but it will slowly drift against the beat. Good for texture, less good for anything that has to lock to a drum part.</p>
 
-  <h4 style="font-size:15px;margin:22px 0 8px;">Locked to tempo — the sequencer retriggers Envelope 1</h4>
+  <h4>Locked to tempo — the sequencer retriggers Envelope 1</h4>
   <p>Every sequencer step retriggers the envelopes — the same behaviour that made the sequencer useless as a drone earlier is exactly what you want here. Set <strong>MW 0</strong>, <strong>ENV1 → Waves 40</strong>, <strong>EG1 (A1 D1 S1 R1) 12 / 20 / 00 / 15</strong>, keeping <strong>UW 2</strong> and <strong>Waves Osc 10</strong>. Record eight steps of the same note and press Play.</p>
   <p>Each step now sweeps up on the attack and back down on the decay, landing exactly on the grid. BPM and DIV set the rhythm; EG1's attack and decay set the shape inside each step. Keep the two short enough to finish within a step, or consecutive sweeps blur into each other — at 110 bpm in sixteenths a step is only around 135 ms.</p>
 
-  <h4 style="font-size:15px;margin:22px 0 8px;">The literal version — arpeggiator plus keyboard tracking</h4>
+  <h4>The literal version — arpeggiator plus keyboard tracking</h4>
   <p>Set <strong>ENV1 → Waves 00</strong>, <strong>KW 3</strong> so higher notes sit higher in the table, then in the Sequencer menu set <strong>MOD 13</strong> — arpeggiator, up and down. Hold a chord spread over two octaves. The arpeggio climbs and falls in pitch, and the wave position climbs and falls with it, in time.</p>
 
   <div class="note">
@@ -1038,7 +1707,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">08</span></span>
       <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">08</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">44</span></span>
       <span class="lcd-cell"><span class="k">EG1 A/D/S/R</span><span class="v">00 / 18 / 00 / 20</span></span>
       <span class="lcd-cell"><span class="k">EG3 Att · Dec · Atten</span><span class="v">45 / 30 / 55</span></span>
@@ -1322,13 +1991,13 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">44</span></span>
       <span class="lcd-cell"><span class="k">EG1 A/D/S/R</span><span class="v">42 / 50 / 25 / 45</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">38</span></span>
       <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">18</span></span>
       <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">22</span></span>
       <span class="lcd-cell"><span class="k">EG2 A/D/S/R</span><span class="v">35 / 40 / 50 / 48</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">LFO Rate</span><span class="v">08</span></span>
       <span class="lcd-cell"><span class="k">LFO Delay</span><span class="v">25</span></span>
       <span class="lcd-cell"><span class="k">Mod Wheel</span><span class="v">50</span></span>
@@ -1362,7 +2031,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">18</span></span>
       <span class="lcd-cell"><span class="k">EG1 A/D/S/R</span><span class="v">00 / 22 / 00 / 25</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">30</span></span>
       <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">26</span></span>
       <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">30</span></span>
@@ -1395,7 +2064,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">00</span></span>
       <span class="lcd-cell"><span class="k">EG1 A/D/S/R</span><span class="v">00 / 30 / 20 / 20</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">45</span></span>
       <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">22</span></span>
       <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">18</span></span>
@@ -1782,7 +2451,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
 
   <p>Set each box to listen for it: on the <strong>Crave</strong>, the clock source lives in settings mode under Shift + HOLD/REST + 8. On the <strong>Edge</strong>, set the CLOCK switch to <strong>INT/EXT</strong> — the manual specifies the ADV/CLOCK patch point as the external clocking route, and each rising edge advances the sequencer one step.</p>
 
-  <h4 style="font-size:15px;margin:24px 0 8px;">What to buy</h4>
+  <h4>What to buy</h4>
   <p>The connectors do not match. The Wave's Sync In and Sync Out are <strong>¼" TRS</strong>, in keeping with every other jack on the instrument, while analog sync on the Crave, the Edge and most other gear is 3.5&nbsp;mm. And one Sync Out has to reach four jacks.</p>
   <ul>
     <li><strong>1 ×</strong> ¼" TRS male to two 3.5&nbsp;mm TS male breakout — sometimes sold as an insert cable variant. This splits tip from ring. A ¼" TRS insert cable into two ¼"-to-3.5&nbsp;mm adapters does the same job with more connectors in the path.</li>
@@ -1791,7 +2460,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   </ul>
   <p>Splitting a pulse passively into two high-impedance CV inputs is fine — neither box loads it meaningfully. Splitting at the source is also the only option, since neither the Crave nor the Edge has a clock output to daisy-chain from.</p>
 
-  <h4 style="font-size:15px;margin:24px 0 8px;">Setting the rate</h4>
+  <h4>Setting the rate</h4>
   <p>Set the second digit of <strong>CLK</strong> to <strong>0</strong> — one pulse per step — and all three machines advance together, one step each per pulse. Confirm it by ear before building anything on top: one Wave step should move the Crave and the Edge by exactly one.</p>
   <p>From there the Wave's <strong>DIV</strong> decides what a step means musically, and it applies to the whole rig at once. Both boxes' own tempo controls go inert while they are following an external clock, which is the point — one tempo, one transport, three instruments.</p>
 
@@ -1828,17 +2497,41 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   </table>
   <p>If a recipe doesn't sound right, identify which of the four is off before adjusting anything else. And the usual caution applies: these are starting points, not exact targets.</p>
 
-  <h3>Warm pad <button class="chk" data-lesson="c01" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Warm pad <button class="chk" data-lesson="c01">Settings</button></h3>
   <p><strong>What defines it:</strong> Slow in, slow out, two detuned oscillators, and gentle movement that arrives after the chord does. The loudness envelope is doing most of the work.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Wave</span><span class="v">028</span></span><span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">MW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">VL</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">Osc</span><span class="v">1</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Wave</span><span class="v">028</span></span>
+      <span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">MW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">VL</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">Osc</span><span class="v">1</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">10</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">40</span></span><span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">30</span></span><span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">45 / 50 / 35 / 50</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">34</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">Emphasis</span><span class="v">12</span></span><span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">18</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">42 / 45 / 55 / 55</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span><span class="lcd-cell"><span class="k">LFO Rate</span><span class="v">08</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">LFO Delay</span><span class="v">30</span></span><span class="lcd-cell"><span class="k">Mod Wheel</span><span class="v">40</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">10</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">40</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">30</span></span>
+      <span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">45 / 50 / 35 / 50</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">34</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">12</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">18</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">42 / 45 / 55 / 55</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span>
+      <span class="lcd-cell"><span class="k">LFO Rate</span><span class="v">08</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">LFO Delay</span><span class="v">30</span></span>
+      <span class="lcd-cell"><span class="k">Mod Wheel</span><span class="v">40</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>Play long chords in the middle of the keyboard and let each one finish arriving before you judge it.</li>
@@ -1846,16 +2539,34 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <li>Too dull: raise Waves Osc before you raise the cutoff. Too busy: lower ENV1 → Waves.</li>
   </ol>
 
-  <h3>Pluck <button class="chk" data-lesson="c02" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Pluck <button class="chk" data-lesson="c02">Settings</button></h3>
   <p><strong>What defines it:</strong> Zero attack and a short decay to zero sustain on both envelopes, so the note speaks instantly and dies while your finger is still down. The filter snapping shut is the sound.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">VF</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">VL</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">Detu</span><span class="v">1</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">VF</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">VL</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">Detu</span><span class="v">1</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">16</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">30</span></span><span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">20</span></span><span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">00 / 20 / 00 / 18</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">22</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">Emphasis</span><span class="v">24</span></span><span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">40</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 24 / 00 / 22</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">16</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">30</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">20</span></span>
+      <span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">00 / 20 / 00 / 18</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">22</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">24</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">40</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 24 / 00 / 22</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>EG1 Decay is the character control: 10 is a click, 35 is a harp, 50 starts turning into a keys sound.</li>
@@ -1863,16 +2574,32 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <li>Raise Emphasis toward 40 for the squelchier, more synthetic version.</li>
   </ol>
 
-  <h3>Bass <button class="chk" data-lesson="c03" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Bass <button class="chk" data-lesson="c03">Settings</button></h3>
   <p><strong>What defines it:</strong> One note at a time, a second oscillator an octave below, and a filter envelope working from a low cutoff. Unison stacks all eight voices on the one note, which is where the weight comes from.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Keyb</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KF</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">VF</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">Detu</span><span class="v">8</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Keyb</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KF</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">VF</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">Detu</span><span class="v">8</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">60</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">62</span></span><span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">00 / 26 / 10 / 14</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">18</span></span><span class="lcd-cell"><span class="k">Emphasis</span><span class="v">26</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">36</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 40 / 40 / 10</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">55</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">60</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">62</span></span>
+      <span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">00 / 26 / 10 / 14</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">18</span></span>
+      <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">26</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">36</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 40 / 40 / 10</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">55</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>UW stays at 0 because position 60 has to be the analog sawtooth and 62 the square. Nothing here sweeps the wave position, so wrapping never comes up.</li>
@@ -1881,17 +2608,42 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   </ol>
   <div class="note warn"><span class="lbl">Put back</span><p>KEYB 3 is a Program menu setting, so it applies to the whole program. Put it back to 0 afterwards.</p></div>
 
-  <h3>Lead <button class="chk" data-lesson="c04" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Lead <button class="chk" data-lesson="c04">Settings</button></h3>
   <p><strong>What defines it:</strong> Monophonic with glide, so notes connect, and vibrato that you bring in by hand rather than having it running all the time.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Wave</span><span class="v">026</span></span><span class="lcd-cell"><span class="k">Keyb</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">VF</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">MO</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">MS</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">EO</span><span class="v">3</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Wave</span><span class="v">026</span></span>
+      <span class="lcd-cell"><span class="k">Keyb</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">VF</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">MO</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">MS</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">EO</span><span class="v">3</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">20</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">36</span></span><span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">16</span></span><span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">04 / 30 / 30 / 22</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">38</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">Emphasis</span><span class="v">20</span></span><span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">24</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">02 / 40 / 50 / 26</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">55</span></span><span class="lcd-cell"><span class="k">LFO Rate</span><span class="v">28</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">20</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">36</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">16</span></span>
+      <span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">04 / 30 / 30 / 22</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">38</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">20</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">24</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">02 / 40 / 50 / 26</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">55</span></span>
+      <span class="lcd-cell"><span class="k">LFO Rate</span><span class="v">28</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>EO 3 is portamento: play legato and the pitch slides between notes. Higher EO values glide more slowly.</li>
@@ -1899,20 +2651,44 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <li>Try Waves Sub at 60 with UW 0 for a harder-edged version — nothing sweeps far enough here to wrap.</li>
   </ol>
 
-  <h3>Pulsing chords <button class="chk" data-lesson="c05" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Pulsing chords <button class="chk" data-lesson="c05">Settings</button></h3>
   <p><strong>What defines it:</strong> A sustained chord chopped into rhythm. The trick is that the notes are not what pulses — the sequencer retriggers a short loudness envelope on every step, and that envelope is the rhythm.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Wave</span><span class="v">028</span></span><span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">Osc</span><span class="v">1</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Wave</span><span class="v">028</span></span>
+      <span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">Osc</span><span class="v">1</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">14</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">44</span></span><span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">18</span></span><span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">00 / 16 / 00 / 10</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">30</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">Emphasis</span><span class="v">16</span></span><span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">30</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 18 / 00 / 10</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">14</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">44</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">18</span></span>
+      <span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">00 / 16 / 00 / 10</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">30</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">16</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">30</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 18 / 00 / 10</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Sequencer menu</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">BPM</span><span class="v">110</span></span><span class="lcd-cell"><span class="k">DIV</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">GAT</span><span class="v">45</span></span><span class="lcd-cell"><span class="k">OVP</span><span class="v">00</span></span><span class="lcd-cell"><span class="k">Steps</span><span class="v">16 × Am7</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">BPM</span><span class="v">110</span></span>
+      <span class="lcd-cell"><span class="k">DIV</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">GAT</span><span class="v">45</span></span>
+      <span class="lcd-cell"><span class="k">OVP</span><span class="v">00</span></span>
+      <span class="lcd-cell"><span class="k">Steps</span><span class="v">16 × Am7</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>In the Sequencer menu set BPM 110, DIV 2, GAT 45. Record sixteen steps, each the same A minor 7 chord — A, C, E, G.</li>
@@ -1921,16 +2697,34 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <li>For a free-running version without the sequencer: hold the chord on a pad patch and set MF 7 with the LFO Waveshape at the top of its range, so a square LFO chops the filter instead.</li>
   </ol>
 
-  <h3>Bells <button class="chk" data-lesson="c06" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Bells <button class="chk" data-lesson="c06">Settings</button></h3>
   <p><strong>What defines it:</strong> Instant attack, a long decay down to nothing, and harmonics that are not whole-number multiples of the note. Ring modulation with a slightly detuned second oscillator supplies that inharmonic content.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Wave</span><span class="v">002</span></span><span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">5</span></span><span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">VL</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">Detu</span><span class="v">3</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Wave</span><span class="v">002</span></span>
+      <span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">5</span></span>
+      <span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">VL</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">Detu</span><span class="v">3</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">24</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">04</span></span><span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">14</span></span><span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">00 / 30 / 00 / 40</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">44</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">Emphasis</span><span class="v">10</span></span><span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">20</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 50 / 00 / 52</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">24</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">04</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">14</span></span>
+      <span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">00 / 30 / 00 / 40</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">44</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">10</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">20</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 50 / 00 / 52</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>Play single notes high on the keyboard and let them ring.</li>
@@ -1938,16 +2732,35 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <li>Waves Sub picks the modulating waveform. Low values are cleaner; higher ones get denser and noisier.</li>
   </ol>
 
-  <h3>Brass <button class="chk" data-lesson="c07" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Brass <button class="chk" data-lesson="c07">Settings</button></h3>
   <p><strong>What defines it:</strong> The filter opens slightly after the note starts, which produces the characteristic blat. Velocity to the filter makes hard playing brighter, the way a real brass player gets louder and harder at once.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Wave</span><span class="v">026</span></span><span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">VF</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">VL</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">Detu</span><span class="v">1</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Wave</span><span class="v">026</span></span>
+      <span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">VF</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">VL</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">Detu</span><span class="v">1</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">18</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">40</span></span><span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">20</span></span><span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">10 / 34 / 30 / 20</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">20</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">Emphasis</span><span class="v">14</span></span><span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">44</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">06 / 40 / 52 / 22</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">52</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">18</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">40</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">20</span></span>
+      <span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">10 / 34 / 30 / 20</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">20</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">14</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">44</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">06 / 40 / 52 / 22</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">52</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>EG1 Attack is the defining control. At 00 it clicks; at 10 it swells into the note; at 25 it becomes a slow horn swell.</li>
@@ -1955,18 +2768,45 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <li>Wavetable 026 BrassForm is built for this; try 015 for a reedier, harmonium-like version.</li>
   </ol>
 
-  <h3>Strings <button class="chk" data-lesson="c08" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Strings <button class="chk" data-lesson="c08">Settings</button></h3>
   <p><strong>What defines it:</strong> A bowed attack — faster than a pad, slower than a pluck — full sustain, an ensemble of detuned oscillators, and vibrato that arrives a moment into each held note.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Wave</span><span class="v">028</span></span><span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">VL</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">MO</span><span class="v">1</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">MS</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">Osc</span><span class="v">1</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Wave</span><span class="v">028</span></span>
+      <span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">VL</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">MO</span><span class="v">1</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">MS</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">Osc</span><span class="v">1</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">08</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">30</span></span><span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">12</span></span><span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">30 / 40 / 40 / 40</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">40</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">Emphasis</span><span class="v">06</span></span><span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">14</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">28 / 40 / 58 / 40</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span><span class="lcd-cell"><span class="k">LFO Rate</span><span class="v">26</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">LFO Delay</span><span class="v">30</span></span><span class="lcd-cell"><span class="k">Mod Wheel</span><span class="v">20</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">08</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">30</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">12</span></span>
+      <span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">30 / 40 / 40 / 40</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">40</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">06</span></span>
+      <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">14</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">28 / 40 / 58 / 40</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span>
+      <span class="lcd-cell"><span class="k">LFO Rate</span><span class="v">26</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">LFO Delay</span><span class="v">30</span></span>
+      <span class="lcd-cell"><span class="k">Mod Wheel</span><span class="v">20</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>The difference from the pad: faster attack, almost no filter movement, and pitch vibrato rather than timbral movement.</li>
@@ -1974,15 +2814,27 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <li>For Juno-style synth strings, a staple of synthwave, load WAVE 029 and set MW 5 so the LFO sweeps the pulse width.</li>
   </ol>
 
-  <h3>Organ <button class="chk" data-lesson="c09" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Organ <button class="chk" data-lesson="c09">Settings</button></h3>
   <p><strong>What defines it:</strong> On while held, off when released, no movement from any envelope. The register — which drawbars, in effect — is chosen by the wave position.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Wave</span><span class="v">014</span></span><span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span><span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span><span class="lcd-cell"><span class="k">Detu</span><span class="v">6</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Wave</span><span class="v">014</span></span>
+      <span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">1</span></span>
+      <span class="lcd-cell"><span class="k">KF</span><span class="v">3</span></span>
+      <span class="lcd-cell"><span class="k">Detu</span><span class="v">6</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">10</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">30</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">50</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 63 / 63 / 04</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">10</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">30</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">50</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">00 / 63 / 63 / 04</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>Step Waves Osc through the table while holding a chord. Wavetable 014 OrganicRegisters moves through sine, Hammond, Lowrey and church registers.</li>
@@ -1990,16 +2842,29 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <li>Load Bank 0 program 9, Rotary B3, afterwards and compare.</li>
   </ol>
 
-  <h3>Noise riser <button class="chk" data-lesson="c10" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Noise riser <button class="chk" data-lesson="c10">Settings</button></h3>
   <p><strong>What defines it:</strong> Noise through a resonant filter, opened by a slow envelope. Both attacks are set above 47, so a single tap sets the whole rise in motion and it finishes on its own.</p>
   <div class="lcd">
     <div class="lcd-tag">Program · Digital · Tuning · User</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span><span class="lcd-cell"><span class="k">SW</span><span class="v">6</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">UW</span><span class="v">2</span></span>
+      <span class="lcd-cell"><span class="k">SW</span><span class="v">6</span></span>
+    </div>
   </div>
   <div class="lcd">
     <div class="lcd-tag">Analog</div>
-    <div class="lcd-row"><span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">20</span></span><span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">50</span></span><span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">55 / 60 / 63 / 50</span></span><span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">08</span></span><span class="lcd-cell"><span class="k">Emphasis</span><span class="v">40</span></span></div>
-    <div class="lcd-row" style="margin-top:14px"><span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">60</span></span><span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">50 / 60 / 63 / 55</span></span><span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span></div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">20</span></span>
+      <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">50</span></span>
+      <span class="lcd-cell"><span class="k">EG1 · A1 D1 S1 R1</span><span class="v">55 / 60 / 63 / 50</span></span>
+      <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">08</span></span>
+      <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">40</span></span>
+    </div>
+    <div class="lcd-row">
+      <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">60</span></span>
+      <span class="lcd-cell"><span class="k">EG2 · A2 D2 S2 R2</span><span class="v">50 / 60 / 63 / 55</span></span>
+      <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">50</span></span>
+    </div>
   </div>
   <ol class="steps">
     <li>Tap a key and let go. Above 47, an attack completes whether or not the key is still down — so the rise runs its full length from a single tap.</li>
@@ -2026,7 +2891,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   </div>
 
   <!-- ---------------- SYNTHWAVE ---------------- -->
-  <h3>Project A — Synthwave, "Night Drive" <button class="chk" data-lesson="p1" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Project A — Synthwave, "Night Drive" <button class="chk" data-lesson="p1">Settings</button></h3>
   <p>A driving sixteenth-note bass-arp that carries a whole section on its own. Wavetable 029 PulseShift means the sweep is pulse-width modulation, which is the sound the genre is built on.</p>
 
   <div class="lcd">
@@ -2052,7 +2917,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">22</span></span>
       <span class="lcd-cell"><span class="k">EG1 A/D/S/R</span><span class="v">00 / 26 / 10 / 20</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">26</span></span>
       <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">24</span></span>
       <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">38</span></span>
@@ -2082,7 +2947,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   <p><strong>Going further.</strong> Set <strong>KEYB 1</strong> (Quad A/B) and program Group B as a pad — Lesson 11A's Sweep Pad works — for bass and pad together from one keyboard.</p>
 
   <!-- ---------------- LO-FI ---------------- -->
-  <h3>Project B — Lo-fi, "Tape Room" <button class="chk" data-lesson="p2" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Project B — Lo-fi, "Tape Room" <button class="chk" data-lesson="p2">Settings</button></h3>
   <p>Ring modulation, per-key waveforms and the original aliasing doing the degradation that a plugin would otherwise have to fake. Slow, sparse, and deliberately unstable in pitch.</p>
 
   <div class="lcd">
@@ -2111,7 +2976,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">EG1 A/D/S/R</span><span class="v">00 / 24 / 00 / 25</span></span>
       <span class="lcd-cell"><span class="k">EG3 A/D/Att</span><span class="v">00 / 34 / 38</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">28</span></span>
       <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">26</span></span>
       <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">30</span></span>
@@ -2141,7 +3006,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   <p><strong>Going further.</strong> Resample the whole thing through the Chompi and chop it. The Wave's output already has the aliasing and detuning; chopping adds the edit artefacts, and the two together are most of the genre. A transient — <strong>040 Medium EP</strong> with a short loop — makes a good second pass over the same sequence.</p>
 
   <!-- ---------------- AMBIENT ---------------- -->
-  <h3>Project C — Ambient, "Slow Weather" <button class="chk" data-lesson="p3" style="margin-left:12px;vertical-align:middle">Settings</button></h3>
+  <h3>Project C — Ambient, "Slow Weather" <button class="chk" data-lesson="p3">Settings</button></h3>
   <p>Nothing percussive, no clear downbeat, and every parameter that can move slowly is moving slowly. The arpeggiator runs at a speed where it reads as texture rather than rhythm.</p>
 
   <div class="lcd">
@@ -2169,14 +3034,14 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">EG1 A/D/S/R</span><span class="v">52 / 58 / 30 / 58</span></span>
       <span class="lcd-cell"><span class="k">Mod Wheel</span><span class="v">44</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">34</span></span>
       <span class="lcd-cell"><span class="k">Emphasis</span><span class="v">14</span></span>
       <span class="lcd-cell"><span class="k">ENV1 → VCF</span><span class="v">20</span></span>
       <span class="lcd-cell"><span class="k">EG2 A/D/S/R</span><span class="v">48 / 55 / 52 / 63</span></span>
       <span class="lcd-cell"><span class="k">ENV2 → Loud</span><span class="v">52</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">LFO Rate</span><span class="v">05</span></span>
       <span class="lcd-cell"><span class="k">LFO Delay</span><span class="v">36</span></span>
       <span class="lcd-cell"><span class="k">Waveshape</span><span class="v">00</span></span>
@@ -2242,7 +3107,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">10</span></span>
       <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">60</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">16</span></span>
       <span class="lcd-cell"><span class="k">EG1 A/D/S/R</span><span class="v">00 / 22 / 06 / 16</span></span>
       <span class="lcd-cell"><span class="k">VCF Cut</span><span class="v">22</span></span>
@@ -2264,7 +3129,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">VL</span><span class="v">2</span></span>
       <span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">24</span></span>
       <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">44</span></span>
       <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">26</span></span>
@@ -2326,7 +3191,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">Detu</span><span class="v">2</span></span>
       <span class="lcd-cell"><span class="k">Mod Wheel</span><span class="v">40</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">08</span></span>
       <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">46</span></span>
       <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">38</span></span>
@@ -2350,7 +3215,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
       <span class="lcd-cell"><span class="k">VL</span><span class="v">3</span></span>
       <span class="lcd-cell"><span class="k">Detu</span><span class="v">1</span></span>
     </div>
-    <div class="lcd-row" style="margin-top:14px">
+    <div class="lcd-row">
       <span class="lcd-cell"><span class="k">Waves Osc</span><span class="v">20</span></span>
       <span class="lcd-cell"><span class="k">Waves Sub</span><span class="v">04</span></span>
       <span class="lcd-cell"><span class="k">ENV1 → Waves</span><span class="v">14</span></span>
@@ -2810,7 +3675,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   <h3>Abbreviations</h3>
   <p>Everything the display and panel shorten, in one place.</p>
 
-  <h4 style="font-size:14px;margin:22px 0 6px;">Synthesis terms</h4>
+  <h4>Synthesis terms</h4>
   <table class="wide">
     <tr><td class="n">EG</td><td>Envelope generator. EG1, EG2, EG3 are the three envelopes and their A/D/S/R knobs.</td></tr>
     <tr><td class="n">ENV</td><td>The same word, used on the three depth knobs in Modifiers Control — ENV 1 ▸ VCF, ENV 2 ▸ LOUDNESS, ENV 1 ▸ WAVES.</td></tr>
@@ -2825,7 +3690,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <tr><td class="n">Group A / B</td><td>Every program holds two complete sounds. They can be layered, split across the keyboard, or used one at a time.</td></tr>
   </table>
 
-  <h4 style="font-size:14px;margin:22px 0 6px;">Program menu</h4>
+  <h4>Program menu</h4>
   <table class="wide">
     <tr><td class="n">PROG</td><td>Current program number, 0–99.</td></tr>
     <tr><td class="n">BANK</td><td>Program bank, 0 or 1.</td></tr>
@@ -2839,7 +3704,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <tr><td class="n">LOC</td><td>Local control. 0 disconnects the keyboard from the sound engine, for DAW use.</td></tr>
   </table>
 
-  <h4 style="font-size:14px;margin:22px 0 6px;">User menu — global, survives program changes</h4>
+  <h4>User menu — global, survives program changes</h4>
   <table class="wide">
     <tr><td class="n">EXP-PED</td><td>What an expression pedal controls.</td></tr>
     <tr><td class="n">TOUCH</td><td>Whether channel aftertouch is transmitted and received.</td></tr>
@@ -2851,7 +3716,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <tr><td class="n">LFO</td><td>LFO precision — 0 original and wobbly, 1 modern and stable.</td></tr>
   </table>
 
-  <h4 style="font-size:14px;margin:22px 0 6px;">Digital menu</h4>
+  <h4>Digital menu</h4>
   <p>Most entries are two letters: source, then destination. Sources are <strong>K</strong> keyboard, <strong>M</strong> LFO or mod wheel, <strong>B</strong> pitch bend, <strong>T</strong> aftertouch, <strong>V</strong> velocity. Destinations are <strong>W</strong> wave position, <strong>F</strong> filter, <strong>L</strong> loudness, <strong>M</strong> modulation depth.</p>
   <table class="wide">
     <tr><td class="n">UW</td><td>Upper Wavetable select — 0 normal, 1 upper table, 2 no wrapping. With a transient loaded it sets loop length instead.</td></tr>
@@ -2865,7 +3730,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <tr><td class="n">BI</td><td>Bender interval — its range, from two semitones to two octaves.</td></tr>
   </table>
 
-  <h4 style="font-size:14px;margin:22px 0 6px;">Tuning menu</h4>
+  <h4>Tuning menu</h4>
   <table class="wide">
     <tr><td class="n">DETU</td><td>Detuning between sub and main oscillator. 1–4 are fine amounts, 5–9 fixed intervals.</td></tr>
     <tr><td class="n">MO / MS</td><td>LFO pitch modulation of the main and sub oscillators, through the mod wheel.</td></tr>
@@ -2873,7 +3738,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     <tr><td class="n">SEMIT</td><td>Semitone offset for each of the eight voices individually.</td></tr>
   </table>
 
-  <h4 style="font-size:14px;margin:22px 0 6px;">Sequencer menu</h4>
+  <h4>Sequencer menu</h4>
   <table class="wide">
     <tr><td class="n">MOD</td><td>Sequencer or one of the two arpeggiators, plus the arpeggio pattern.</td></tr>
     <tr><td class="n">CLK</td><td>Clock source and rate — internal, DIN MIDI, USB MIDI or analog trigger.</td></tr>
@@ -2939,23 +3804,21 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   var boxes = document.querySelectorAll('.done input[type=checkbox]');
   var KEY = 'wave-workbook-progress';
 
+  // localStorage can be missing or throw (private windows, blocked site data),
+  // so progress saving is best-effort and the page works without it.
   function load(){
-    if(!window.storage) return;
-    window.storage.get(KEY).then(function(res){
-      if(!res || !res.value) return;
-      var state;
-      try { state = JSON.parse(res.value); } catch(e){ return; }
-      boxes.forEach(function(b){ if(state[b.dataset.k]) b.checked = true; });
-    }).catch(function(){});
+    var state;
+    try { state = JSON.parse(localStorage.getItem(KEY)); } catch(e){ return; }
+    if(!state) return;
+    boxes.forEach(function(b){ if(state[b.dataset.k]) b.checked = true; });
   }
   function save(){
-    if(!window.storage) return;
     var state = {};
     boxes.forEach(function(b){ if(b.checked) state[b.dataset.k] = 1; });
-    window.storage.set(KEY, JSON.stringify(state)).catch(function(){});
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
   }
   boxes.forEach(function(b){ b.addEventListener('change', save); });
-  try { load(); } catch(e){}
+  load();
 
   var links = {};
   document.querySelectorAll('.rail a').forEach(function(a){
@@ -3010,7 +3873,8 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     {id:'l02', label:'02 — UW: the sweep switch', d:{'UW':'0','ENV1 → Waves':'63','EG1 Attack':'40','EG1 Decay':'45','EG1 Sustain':'00'},
      note:'EG1 Attack 40 is what makes the upward half of the sweep audible — at 00 the position jumps to the top instantly and you only hear it fall. Later in the lesson, set Waves Osc 20 to hear wrapping, and compare UW 0 against UW 2 and UW 1.'},
 
-    {id:'l03', label:'03 — Envelope 1 to Waves', d:{'UW':'2','ENV1 → Waves':'63','EG1 Attack':'25','EG1 Decay':'40','EG1 Sustain':'00','EG1 Release':'20','EG2 Release':'50'},
+    {id:'l03', label:'03 — Envelope 1 to Waves', d:{'UW':'2','ENV1 → Waves':'63','EG1 Attack':'25','EG1 Decay':'40','EG1 Sustain':'00',
+       'EG1 Release':'20','EG2 Release':'50'},
      note:'EG2 Release (R2) is shown at 50 because experiment D needs it — without it the sweep continues inaudibly after you release the key. Experiments A to C work at either value. Put it back to 00 before Lesson 04. Finish by running the same patch on WAVE 011 and 027.'},
 
     {id:'l04', label:'04 — Steps or morph', d:{'WAVE':'020','UW':'2','ENV1 → Waves':'63','EG1 Attack':'25','EG1 Decay':'40','EG1 Sustain':'00','EG1 Release':'20'},
@@ -3081,34 +3945,65 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
     {id:'l19', label:'19 — Saving and syncing', d:{'Waves Osc':'20','EG2 Decay':'22','EG2 Sustain':'00','EG2 Release':'18'},
      note:'No patch requirements. SAVE stores the sequence with its GAT and DIV into the program; the sound still needs a separate DTF 9 write. CLK 2 follows USB MIDI from a DAW; Sync Out drives the Crave and Edge.'},
 
-    {id:'c01', label:'20 — Warm pad', d:{'WAVE':'028','UW':'2','SW':'1','KF':'3','MW':'1','VL':'1','DETU':'2','OSC':'1','Waves Osc':'10','Waves Sub':'40','ENV1 → Waves':'30','EG1 Attack':'45','EG1 Decay':'50','EG1 Sustain':'35','EG1 Release':'50','VCF Cutoff':'34','VCF Emphasis':'12','ENV1 → VCF':'18','EG2 Attack':'42','EG2 Decay':'45','EG2 Sustain':'55','EG2 Release':'55','ENV2 → Loudness':'50','LFO Rate':'08','LFO Delay':'30','Mod Wheel':'40'},
+    {id:'c01', label:'20 — Warm pad', d:{'WAVE':'028','UW':'2','SW':'1','KF':'3','MW':'1','VL':'1','DETU':'2','OSC':'1','Waves Osc':'10',
+       'Waves Sub':'40','ENV1 → Waves':'30','EG1 Attack':'45','EG1 Decay':'50','EG1 Sustain':'35',
+       'EG1 Release':'50','VCF Cutoff':'34','VCF Emphasis':'12','ENV1 → VCF':'18','EG2 Attack':'42',
+       'EG2 Decay':'45','EG2 Sustain':'55','EG2 Release':'55','ENV2 → Loudness':'50','LFO Rate':'08',
+       'LFO Delay':'30','Mod Wheel':'40'},
      note:'Recipe — Slow in, slow out, two detuned oscillators, and gentle movement that arrives after the chord does. The loudness envelope is doing most of the work.'},
 
-    {id:'c02', label:'20 — Pluck', d:{'UW':'2','SW':'1','KF':'3','VF':'2','VL':'2','DETU':'1','Waves Osc':'16','Waves Sub':'30','ENV1 → Waves':'20','EG1 Attack':'00','EG1 Decay':'20','EG1 Sustain':'00','EG1 Release':'18','VCF Cutoff':'22','VCF Emphasis':'24','ENV1 → VCF':'40','EG2 Attack':'00','EG2 Decay':'24','EG2 Sustain':'00','EG2 Release':'22','ENV2 → Loudness':'50'},
+    {id:'c02', label:'20 — Pluck', d:{'UW':'2','SW':'1','KF':'3','VF':'2','VL':'2','DETU':'1','Waves Osc':'16','Waves Sub':'30',
+       'ENV1 → Waves':'20','EG1 Attack':'00','EG1 Decay':'20','EG1 Sustain':'00','EG1 Release':'18',
+       'VCF Cutoff':'22','VCF Emphasis':'24','ENV1 → VCF':'40','EG2 Attack':'00','EG2 Decay':'24',
+       'EG2 Sustain':'00','EG2 Release':'22','ENV2 → Loudness':'50'},
      note:'Recipe — Zero attack and a short decay to zero sustain on both envelopes, so the note speaks instantly and dies while your finger is still down. The filter snapping shut is the sound.'},
 
-    {id:'c03', label:'20 — Bass', d:{'KEYB':'3','SW':'1','KF':'2','VF':'2','DETU':'8','Waves Osc':'60','Waves Sub':'62','EG1 Attack':'00','EG1 Decay':'26','EG1 Sustain':'10','EG1 Release':'14','VCF Cutoff':'18','VCF Emphasis':'26','ENV1 → VCF':'36','EG2 Attack':'00','EG2 Decay':'40','EG2 Sustain':'40','EG2 Release':'10','ENV2 → Loudness':'55'},
+    {id:'c03', label:'20 — Bass', d:{'KEYB':'3','SW':'1','KF':'2','VF':'2','DETU':'8','Waves Osc':'60','Waves Sub':'62','EG1 Attack':'00',
+       'EG1 Decay':'26','EG1 Sustain':'10','EG1 Release':'14','VCF Cutoff':'18','VCF Emphasis':'26',
+       'ENV1 → VCF':'36','EG2 Attack':'00','EG2 Decay':'40','EG2 Sustain':'40','EG2 Release':'10',
+       'ENV2 → Loudness':'55'},
      note:'Recipe — One note at a time, a second oscillator an octave below, and a filter envelope working from a low cutoff. Unison stacks all eight voices on the one note, which is where the weight comes from.'},
 
-    {id:'c04', label:'20 — Lead', d:{'KEYB':'3','WAVE':'026','UW':'2','SW':'1','KW':'1','KF':'3','VF':'2','DETU':'2','EO':'3','MO':'1','MS':'1','Waves Osc':'20','Waves Sub':'36','ENV1 → Waves':'16','EG1 Attack':'04','EG1 Decay':'30','EG1 Sustain':'30','EG1 Release':'22','VCF Cutoff':'38','VCF Emphasis':'20','ENV1 → VCF':'24','EG2 Attack':'02','EG2 Decay':'40','EG2 Sustain':'50','EG2 Release':'26','ENV2 → Loudness':'55','LFO Rate':'28'},
+    {id:'c04', label:'20 — Lead', d:{'KEYB':'3','WAVE':'026','UW':'2','SW':'1','KW':'1','KF':'3','VF':'2','DETU':'2','EO':'3','MO':'1',
+       'MS':'1','Waves Osc':'20','Waves Sub':'36','ENV1 → Waves':'16','EG1 Attack':'04','EG1 Decay':'30',
+       'EG1 Sustain':'30','EG1 Release':'22','VCF Cutoff':'38','VCF Emphasis':'20','ENV1 → VCF':'24',
+       'EG2 Attack':'02','EG2 Decay':'40','EG2 Sustain':'50','EG2 Release':'26','ENV2 → Loudness':'55',
+       'LFO Rate':'28'},
      note:'Recipe — Monophonic with glide, so notes connect, and vibrato that you bring in by hand rather than having it running all the time.'},
 
-    {id:'c05', label:'20 — Pulsing chords', d:{'WAVE':'028','UW':'2','SW':'1','KF':'3','DETU':'2','OSC':'1','Waves Osc':'14','Waves Sub':'44','ENV1 → Waves':'18','EG1 Attack':'00','EG1 Decay':'16','EG1 Sustain':'00','EG1 Release':'10','VCF Cutoff':'30','VCF Emphasis':'16','ENV1 → VCF':'30','EG2 Attack':'00','EG2 Decay':'18','EG2 Sustain':'00','EG2 Release':'10','ENV2 → Loudness':'50'},
+    {id:'c05', label:'20 — Pulsing chords', d:{'WAVE':'028','UW':'2','SW':'1','KF':'3','DETU':'2','OSC':'1','Waves Osc':'14','Waves Sub':'44',
+       'ENV1 → Waves':'18','EG1 Attack':'00','EG1 Decay':'16','EG1 Sustain':'00','EG1 Release':'10',
+       'VCF Cutoff':'30','VCF Emphasis':'16','ENV1 → VCF':'30','EG2 Attack':'00','EG2 Decay':'18',
+       'EG2 Sustain':'00','EG2 Release':'10','ENV2 → Loudness':'50'},
      note:'Recipe — A sustained chord chopped into rhythm. The trick is that the notes are not what pulses — the sequencer retriggers a short loudness envelope on every step, and that envelope is the rhythm. Sequencer: BPM 110, DIV 2, GAT 45, sixteen steps of Am7.'},
 
-    {id:'c06', label:'20 — Bells', d:{'WAVE':'002','UW':'2','SW':'5','KF':'3','VL':'3','DETU':'3','Waves Osc':'24','Waves Sub':'04','ENV1 → Waves':'14','EG1 Attack':'00','EG1 Decay':'30','EG1 Sustain':'00','EG1 Release':'40','VCF Cutoff':'44','VCF Emphasis':'10','ENV1 → VCF':'20','EG2 Attack':'00','EG2 Decay':'50','EG2 Sustain':'00','EG2 Release':'52','ENV2 → Loudness':'50'},
+    {id:'c06', label:'20 — Bells', d:{'WAVE':'002','UW':'2','SW':'5','KF':'3','VL':'3','DETU':'3','Waves Osc':'24','Waves Sub':'04',
+       'ENV1 → Waves':'14','EG1 Attack':'00','EG1 Decay':'30','EG1 Sustain':'00','EG1 Release':'40',
+       'VCF Cutoff':'44','VCF Emphasis':'10','ENV1 → VCF':'20','EG2 Attack':'00','EG2 Decay':'50',
+       'EG2 Sustain':'00','EG2 Release':'52','ENV2 → Loudness':'50'},
      note:'Recipe — Instant attack, a long decay down to nothing, and harmonics that are not whole-number multiples of the note. Ring modulation with a slightly detuned second oscillator supplies that inharmonic content.'},
 
-    {id:'c07', label:'20 — Brass', d:{'WAVE':'026','UW':'2','SW':'1','KF':'3','VF':'3','VL':'2','DETU':'1','Waves Osc':'18','Waves Sub':'40','ENV1 → Waves':'20','EG1 Attack':'10','EG1 Decay':'34','EG1 Sustain':'30','EG1 Release':'20','VCF Cutoff':'20','VCF Emphasis':'14','ENV1 → VCF':'44','EG2 Attack':'06','EG2 Decay':'40','EG2 Sustain':'52','EG2 Release':'22','ENV2 → Loudness':'52'},
+    {id:'c07', label:'20 — Brass', d:{'WAVE':'026','UW':'2','SW':'1','KF':'3','VF':'3','VL':'2','DETU':'1','Waves Osc':'18',
+       'Waves Sub':'40','ENV1 → Waves':'20','EG1 Attack':'10','EG1 Decay':'34','EG1 Sustain':'30',
+       'EG1 Release':'20','VCF Cutoff':'20','VCF Emphasis':'14','ENV1 → VCF':'44','EG2 Attack':'06',
+       'EG2 Decay':'40','EG2 Sustain':'52','EG2 Release':'22','ENV2 → Loudness':'52'},
      note:'Recipe — The filter opens slightly after the note starts, which produces the characteristic blat. Velocity to the filter makes hard playing brighter, the way a real brass player gets louder and harder at once.'},
 
-    {id:'c08', label:'20 — Strings', d:{'WAVE':'028','UW':'2','SW':'1','KW':'1','KF':'3','VL':'1','DETU':'2','MO':'1','MS':'1','OSC':'1','Waves Osc':'08','Waves Sub':'30','ENV1 → Waves':'12','EG1 Attack':'30','EG1 Decay':'40','EG1 Sustain':'40','EG1 Release':'40','VCF Cutoff':'40','VCF Emphasis':'06','ENV1 → VCF':'14','EG2 Attack':'28','EG2 Decay':'40','EG2 Sustain':'58','EG2 Release':'40','ENV2 → Loudness':'50','LFO Rate':'26','LFO Delay':'30','Mod Wheel':'20'},
+    {id:'c08', label:'20 — Strings', d:{'WAVE':'028','UW':'2','SW':'1','KW':'1','KF':'3','VL':'1','DETU':'2','MO':'1','MS':'1','OSC':'1',
+       'Waves Osc':'08','Waves Sub':'30','ENV1 → Waves':'12','EG1 Attack':'30','EG1 Decay':'40',
+       'EG1 Sustain':'40','EG1 Release':'40','VCF Cutoff':'40','VCF Emphasis':'06','ENV1 → VCF':'14',
+       'EG2 Attack':'28','EG2 Decay':'40','EG2 Sustain':'58','EG2 Release':'40','ENV2 → Loudness':'50',
+       'LFO Rate':'26','LFO Delay':'30','Mod Wheel':'20'},
      note:'Recipe — A bowed attack — faster than a pad, slower than a pluck — full sustain, an ensemble of detuned oscillators, and vibrato that arrives a moment into each held note.'},
 
-    {id:'c09', label:'20 — Organ', d:{'WAVE':'014','UW':'2','SW':'1','KF':'3','DETU':'6','Waves Osc':'10','Waves Sub':'30','VCF Cutoff':'50','EG2 Attack':'00','EG2 Decay':'63','EG2 Sustain':'63','EG2 Release':'04','ENV2 → Loudness':'50'},
+    {id:'c09', label:'20 — Organ', d:{'WAVE':'014','UW':'2','SW':'1','KF':'3','DETU':'6','Waves Osc':'10','Waves Sub':'30',
+       'VCF Cutoff':'50','EG2 Attack':'00','EG2 Decay':'63','EG2 Sustain':'63','EG2 Release':'04',
+       'ENV2 → Loudness':'50'},
      note:'Recipe — On while held, off when released, no movement from any envelope. The register — which drawbars, in effect — is chosen by the wave position.'},
 
-    {id:'c10', label:'20 — Noise riser', d:{'UW':'2','SW':'6','Waves Osc':'20','Waves Sub':'50','EG1 Attack':'55','EG1 Decay':'60','EG1 Sustain':'63','EG1 Release':'50','VCF Cutoff':'08','VCF Emphasis':'40','ENV1 → VCF':'60','EG2 Attack':'50','EG2 Decay':'60','EG2 Sustain':'63','EG2 Release':'55','ENV2 → Loudness':'50'},
+    {id:'c10', label:'20 — Noise riser', d:{'UW':'2','SW':'6','Waves Osc':'20','Waves Sub':'50','EG1 Attack':'55','EG1 Decay':'60',
+       'EG1 Sustain':'63','EG1 Release':'50','VCF Cutoff':'08','VCF Emphasis':'40','ENV1 → VCF':'60',
+       'EG2 Attack':'50','EG2 Decay':'60','EG2 Sustain':'63','EG2 Release':'55','ENV2 → Loudness':'50'},
      note:'Recipe — Noise through a resonant filter, opened by a slow envelope. Both attacks are set above 47, so a single tap sets the whole rise in motion and it finishes on its own.'},
 
     {id:'p1', label:'21A — Synthwave, Night Drive', d:{'WAVE':'029','UW':'0','SW':'1','KF':'3','MF':'2','VF':'2','VL':'2','DETU':'2','OSC':'1',
@@ -3191,6 +4086,26 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--card)
   mx.addEventListener('click', close);
   ovl.addEventListener('click', function(e){ if(e.target===ovl) close(); });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') close(); });
+})();
+// ---------------- theme switch ----------------
+(function(){
+  var root = document.documentElement;
+  var btn = document.getElementById('theme-toggle');
+  var systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function isDark(){
+    return root.dataset.theme ? root.dataset.theme === 'dark' : systemDark.matches;
+  }
+  function sync(){ btn.setAttribute('aria-pressed', isDark() ? 'true' : 'false'); }
+
+  btn.addEventListener('click', function(){
+    var next = isDark() ? 'light' : 'dark';
+    root.dataset.theme = next;
+    try { localStorage.setItem('wave-theme', next); } catch (_) {}
+    sync();
+  });
+  systemDark.addEventListener('change', sync);
+  sync();
 })();
 </script>
 </body>
