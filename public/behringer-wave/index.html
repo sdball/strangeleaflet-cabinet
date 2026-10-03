@@ -247,6 +247,39 @@ kbd {
   padding-top: 0;
 }
 
+/* "Continue" card: the first lesson not yet ticked off. */
+.rail a.resume {
+  display: block;
+  margin: 0 0 20px;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ppg);
+  border-radius: 2px;
+  color: var(--ink);
+  font-weight: 400;
+}
+.rail a.resume[hidden] { display: none; }
+.rail a.resume[href]:hover { border-color: var(--ppg); }
+.resume span { display: block; }
+.resume-k {
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--ppg);
+}
+.resume-t {
+  font-weight: 600;
+  margin: 2px 0;
+}
+.resume-c {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--mute);
+}
+
 /* ---------------- Theme switch ---------------- */
 
 .theme-toggle {
@@ -1004,6 +1037,11 @@ h3 .chk {
     <span class="track" aria-hidden="true"></span>Dark mode
   </button>
   <div class="rail-mark">The Wave, End to End</div>
+  <a class="resume" id="resume" hidden>
+    <span class="resume-k">Continue</span>
+    <span class="resume-t"></span>
+    <span class="resume-c"></span>
+  </a>
   <div class="rail-part">Orientation</div>
   <a href="#primer"><span class="n">—</span><span>How the Wave makes a sound</span></a>
   <a href="#start"><span class="n">—</span><span>How to work these lessons</span></a>
@@ -4042,11 +4080,39 @@ h3 .chk {
     boxes.forEach(function(b){ if(b.checked) state[b.dataset.k] = 1; });
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
   }
-  boxes.forEach(function(b){ b.addEventListener('change', save); });
+  // "Continue" card in the rail: the first lesson whose box isn't ticked yet.
+  // Hidden until something is ticked, so a first visit doesn't see it.
+  var resume = document.getElementById('resume');
+  function updateResume(){
+    var done = 0, next = null;
+    boxes.forEach(function(b){
+      if(b.checked) done++;
+      else if(!next) next = b.closest('section');
+    });
+    resume.hidden = done === 0;
+    var count = done + ' of ' + boxes.length + ' done';
+    if(next){
+      var link = document.querySelector('.rail a[href="#' + next.id + '"]');
+      var num = link.querySelector('.n').textContent, title = link.lastElementChild.textContent;
+      resume.href = '#' + next.id;
+      resume.querySelector('.resume-k').textContent = 'Continue';
+      resume.querySelector('.resume-t').textContent = (num === '—' ? '' : num + ' · ') + title;
+    } else {
+      resume.removeAttribute('href');
+      resume.querySelector('.resume-k').textContent = 'Finished';
+      resume.querySelector('.resume-t').textContent = 'Every lesson is ticked off';
+    }
+    resume.querySelector('.resume-c').textContent = count;
+  }
+
+  boxes.forEach(function(b){
+    b.addEventListener('change', function(){ save(); updateResume(); });
+  });
   load();
+  updateResume();
 
   var links = {};
-  document.querySelectorAll('.rail a').forEach(function(a){
+  document.querySelectorAll('.rail a:not(.resume)').forEach(function(a){
     links[a.getAttribute('href').slice(1)] = a;
   });
   var obs = new IntersectionObserver(function(entries){
