@@ -329,6 +329,10 @@ kbd {
   background: var(--amber);
   opacity: 1;
 }
+.ruler-cells i.cur {
+  background: var(--ink);
+  opacity: 1;
+}
 .ruler-legend {
   display: flex;
   justify-content: space-between;
@@ -343,6 +347,77 @@ kbd {
   color: var(--mute);
   max-width: 60ch;
   margin-top: 6px;
+}
+
+/* ---------------- Wavetable explorer (header) ---------------- */
+
+/* Once the explorer script runs, the strip doubles as a position control. */
+.ruler-cells.live {
+  cursor: pointer;
+  touch-action: none;
+}
+
+.wt { margin-top: 22px; }
+.wt .lcd-cell .v { min-width: 2ch; }
+.wt-scope {
+  display: block;
+  width: 100%;
+  height: 150px;
+  margin: 14px 0 10px;
+  background: var(--lcd-field);
+  border-radius: 2px;
+}
+.wt-slider {
+  display: block;
+  width: 100%;
+  margin: 0 0 14px;
+  accent-color: var(--amber);
+}
+.wt-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.wt-controls select {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--lcd-edge);
+  background: var(--lcd-field);
+  color: var(--amber);
+}
+.wt-seg { display: inline-flex; }
+.wt-seg .wt-btn + .wt-btn { margin-left: -1px; }
+.wt-btn {
+  background: transparent;
+  border: 1px solid var(--lcd-edge);
+  color: var(--lcd-tag);
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.wt-btn:hover { color: #FFFFFF; }
+.wt-btn[aria-pressed="true"] {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--navy);
+}
+.wt-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.wt .wt-btn:focus-visible,
+.wt select:focus-visible,
+.wt-slider:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
 }
 
 /* ---------------- Sections ---------------- */
@@ -911,6 +986,35 @@ h3 .chk {
     </div>
     <div class="ruler-legend"><span>00</span><span>16</span><span>32</span><span>48</span><span>60 · 61 · 62 · 63</span></div>
     <p class="ruler-note">Every wavetable on the Wave is 64 numbered single-cycle waveforms. The last four are always the analog shapes — sawtooth, pulse, square, triangle — no matter which of the 30 tables you load. Almost everything here is about where you sit in that strip and what moves you through it.</p>
+
+    <div class="lcd wt" id="wt">
+      <div class="lcd-tag">Try it · drag along the strip or the slider</div>
+      <div class="lcd-row">
+        <span class="lcd-cell"><span class="k">Table</span><span class="v" id="wt-table">Harmonic stack</span></span>
+        <span class="lcd-cell"><span class="k">Pos</span><span class="v" id="wt-pos">00</span></span>
+        <span class="lcd-cell"><span class="k">Wave</span><span class="v" id="wt-wave">Sine</span></span>
+      </div>
+      <canvas class="wt-scope" id="wt-scope" aria-hidden="true"></canvas>
+      <input type="range" class="wt-slider" id="wt-slider" min="0" max="63" step="1" value="0"
+             aria-label="Wavetable position">
+      <div class="wt-controls">
+        <select id="wt-select" aria-label="Wavetable">
+          <option value="stack">Harmonic stack</option>
+          <option value="trip">Round trip</option>
+          <option value="vox">Vowels</option>
+        </select>
+        <div class="wt-seg" role="group" aria-label="Movement between waves">
+          <button type="button" class="wt-btn" data-osc="0" aria-pressed="true">Step · OSC 0</button>
+          <button type="button" class="wt-btn" data-osc="1" aria-pressed="false">Morph · OSC 1</button>
+        </div>
+        <button type="button" class="wt-btn" id="wt-sweep" aria-pressed="false">Sweep</button>
+        <button type="button" class="wt-btn" id="wt-play" aria-pressed="false">Sound</button>
+      </div>
+      <p class="lcd-cap">These three tables are illustrations generated in your browser, not the Wave's factory data.
+        They're built to behave the way the guide describes 000 Harmonic Bliss, 011 Chiaroscuro and 027 VoxForm:
+        harmonics stacking up in order, dark to bright and back, and a run of vowels. Turn on Sound and sweep in each
+        mode to hear the difference. Step switches waves mid-cycle, which causes the click; Morph glides between them.</p>
+    </div>
   </div>
 </header>
 
@@ -4106,6 +4210,360 @@ h3 .chk {
   });
   systemDark.addEventListener('change', sync);
   sync();
+})();
+
+// ---------------- wavetable explorer ----------------
+// Illustrative tables only: 64 single-cycle waves of 128 samples, like the
+// Wave's, but generated here rather than taken from the factory data.
+(function(){
+  var SAMPLES = 128, WAVES = 64, LAST_TABLE_WAVE = 59;
+  var ANALOG = ['Sawtooth', 'Pulse', 'Square', 'Triangle'];
+  var PITCH = 220; // Hz, A3
+
+  // Sum of sine harmonics; amps[k-1] is the level of harmonic k.
+  function additive(amps){
+    var w = new Float32Array(SAMPLES);
+    for(var k = 1; k <= amps.length; k++){
+      var a = amps[k - 1];
+      if(!a) continue;
+      for(var i = 0; i < SAMPLES; i++) w[i] += a * Math.sin(2 * Math.PI * k * i / SAMPLES);
+    }
+    return normalise(w);
+  }
+  function normalise(w){
+    var peak = 0;
+    for(var i = 0; i < w.length; i++) peak = Math.max(peak, Math.abs(w[i]));
+    if(peak) for(var j = 0; j < w.length; j++) w[j] /= peak;
+    return w;
+  }
+
+  // Positions 60-63: the analog shapes every table ends with.
+  function analogWave(n){
+    var w = new Float32Array(SAMPLES);
+    for(var i = 0; i < SAMPLES; i++){
+      var t = i / SAMPLES;
+      w[i] = n === 0 ? 1 - 2 * t                    // sawtooth
+           : n === 1 ? (t < .25 ? 1 : -1)           // pulse, 25%
+           : n === 2 ? (t < .5 ? 1 : -1)            // square
+           : 1 - 4 * Math.abs(t - .5);              // triangle
+    }
+    return w;
+  }
+
+  // Each table maps a position 0-59 to harmonic levels and a readout label.
+  var VOWELS = [ // name, F1, F2, F3 in Hz
+    ['A', 730, 1090, 2440], ['E', 530, 1840, 2480], ['I', 270, 2290, 3010],
+    ['O', 570, 840, 2410], ['U', 300, 870, 2240]
+  ];
+  var TABLES = {
+    stack: {
+      name: 'Harmonic stack',
+      // One more harmonic per position, each at 1/k: a sine becomes a saw.
+      amps: function(p){
+        var a = [];
+        for(var k = 1; k <= p + 1; k++) a.push(1 / k);
+        return a;
+      },
+      label: function(p){ return p === 0 ? 'Sine' : (p + 1) + ' harmonics'; }
+    },
+    trip: {
+      name: 'Round trip',
+      // Brightness rises to a peak at 32 and falls back: dark, bright, dark.
+      amps: function(p){
+        var b = Math.max(0, 1 - Math.abs(p - 32) / 32), a = [];
+        for(var k = 1; k <= 48; k++) a.push(Math.exp(-(k - 1) / (.4 + b * 10)) * (k % 2 ? 1 : .55));
+        return a;
+      },
+      label: function(p){
+        var b = Math.max(0, 1 - Math.abs(p - 32) / 32);
+        return b < .34 ? 'Dark' : b < .67 ? 'Warmer' : 'Bright';
+      }
+    },
+    vox: {
+      name: 'Vowels',
+      // Harmonics of a 100 Hz voice, boosted near three formants that glide A-E-I-O-U.
+      amps: function(p){
+        var f = formants(p), a = [];
+        for(var k = 1; k <= 40; k++){
+          var hz = k * 100, level = .08 / k;
+          for(var j = 0; j < 3; j++){
+            var d = (hz - f[j]) / (90 + 40 * j);
+            level += [1, .7, .35][j] * Math.exp(-d * d);
+          }
+          a.push(level);
+        }
+        return a;
+      },
+      label: function(p){
+        var s = p / LAST_TABLE_WAVE * (VOWELS.length - 1), i = Math.min(Math.floor(s), VOWELS.length - 2);
+        var f = s - i;
+        return f < .2 ? VOWELS[i][0] : f > .8 ? VOWELS[i + 1][0] : VOWELS[i][0] + ' → ' + VOWELS[i + 1][0];
+      }
+    }
+  };
+  function formants(p){
+    var s = p / LAST_TABLE_WAVE * (VOWELS.length - 1), i = Math.min(Math.floor(s), VOWELS.length - 2), f = s - i;
+    return [1, 2, 3].map(function(j){ return VOWELS[i][j] + (VOWELS[i + 1][j] - VOWELS[i][j]) * f; });
+  }
+
+  // Build a table as one flat Float32Array of 64 x 128 samples.
+  var built = {};
+  function build(id){
+    if(built[id]) return built[id];
+    var flat = new Float32Array(WAVES * SAMPLES);
+    for(var p = 0; p < WAVES; p++){
+      var w = p <= LAST_TABLE_WAVE ? additive(TABLES[id].amps(p)) : analogWave(p - 60);
+      flat.set(w, p * SAMPLES);
+    }
+    return (built[id] = flat);
+  }
+
+  var el = function(id){ return document.getElementById(id); };
+  var panel = el('wt'), canvas = el('wt-scope'), slider = el('wt-slider'), select = el('wt-select');
+  var playBtn = el('wt-play'), sweepBtn = el('wt-sweep');
+  var oscBtns = panel.querySelectorAll('[data-osc]');
+  var strip = document.querySelector('.ruler-cells'), cells = strip.querySelectorAll('i');
+  var ctx2d = canvas.getContext('2d');
+
+  var state = { table: 'stack', pos: 0, morph: false };
+  var lastCell = null;
+
+  // Sample `wave` at `pos`: the nearest wave when stepping, a blend of the
+  // two neighbours when morphing.
+  function waveAt(table, pos, i){
+    var a = Math.floor(pos), b = Math.min(a + 1, WAVES - 1), f = pos - a;
+    if(!state.morph) return table[Math.round(pos) * SAMPLES + i];
+    return table[a * SAMPLES + i] * (1 - f) + table[b * SAMPLES + i] * f;
+  }
+
+  function draw(){
+    var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+    if(canvas.width !== w * dpr || canvas.height !== h * dpr){ canvas.width = w * dpr; canvas.height = h * dpr; }
+    var c = ctx2d, table = build(state.table), styles = getComputedStyle(document.documentElement);
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, w, h);
+
+    c.strokeStyle = styles.getPropertyValue('--lcd-edge').trim();
+    c.lineWidth = 1;
+    c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
+
+    c.strokeStyle = styles.getPropertyValue('--amber').trim();
+    c.lineWidth = 2;
+    c.lineJoin = 'round';
+    c.beginPath();
+    for(var i = 0; i <= SAMPLES; i++){
+      var x = i / SAMPLES * w, y = h / 2 - waveAt(table, state.pos, i % SAMPLES) * (h / 2 - 10);
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.stroke();
+  }
+
+  function render(){
+    var p = state.morph ? state.pos : Math.round(state.pos), n = Math.round(state.pos);
+    el('wt-table').textContent = TABLES[state.table].name;
+    el('wt-pos').textContent = (n < 10 ? '0' : '') + n;
+    el('wt-wave').textContent = n > LAST_TABLE_WAVE ? ANALOG[n - 60] : TABLES[state.table].label(n);
+    slider.value = n;
+    slider.setAttribute('aria-valuetext', 'Position ' + n + ', ' + el('wt-wave').textContent);
+    if(lastCell) lastCell.classList.remove('cur');
+    lastCell = cells[n];
+    lastCell.classList.add('cur');
+    draw();
+    voice.send({ pos: p });
+  }
+
+  function setPos(p){
+    state.pos = Math.max(0, Math.min(WAVES - 1, p));
+    render();
+  }
+
+  // ---- sound: one oscillator voice ----
+  // Stepping switches waves mid-cycle, so the discontinuity (the click)
+  // is real; morphing glides the position and blends neighbouring waves.
+  // The DSP lives in one function so it can run inside an AudioWorklet, or
+  // on the main thread through a ScriptProcessorNode where worklets fail.
+  function createDsp(rate){
+    var table = null, target = 0, pos = 0, morph = false, phase = 0, pitch = 220;
+    var glide = 1 - Math.exp(-1 / (0.04 * rate));
+    return {
+      set: function(d){
+        if(d.table) table = d.table;
+        if('pos' in d) target = d.pos;
+        if('morph' in d) morph = d.morph;
+        if('pitch' in d) pitch = d.pitch;
+      },
+      render: function(out){
+        if(!table){ out.fill(0); return; }
+        var inc = pitch * 128 / rate;
+        for(var i = 0; i < out.length; i++){
+          var a, b, f;
+          if(morph){
+            pos += (target - pos) * glide;
+            a = Math.floor(pos); b = Math.min(a + 1, 63); f = pos - a;
+          } else {
+            pos = target; a = b = Math.round(target); f = 0;
+          }
+          var j = Math.floor(phase), k = (j + 1) & 127, x = phase - j;
+          var sa = table[a * 128 + j] + (table[a * 128 + k] - table[a * 128 + j]) * x;
+          var sb = table[b * 128 + j] + (table[b * 128 + k] - table[b * 128 + j]) * x;
+          out[i] = sa + (sb - sa) * f;
+          phase = (phase + inc) % 128;
+        }
+      }
+    };
+  }
+
+  var WORKLET =
+    'var createDsp = ' + createDsp.toString() + ';\n' +
+    'class WaveVoice extends AudioWorkletProcessor {\n' +
+    '  constructor(){ super(); this.dsp = createDsp(sampleRate); this.port.onmessage = (e) => this.dsp.set(e.data); }\n' +
+    '  process(inputs, outputs){ this.dsp.render(outputs[0][0]); return true; }\n' +
+    '}\n' +
+    'registerProcessor("wave-voice", WaveVoice);';
+
+  var AudioCtx = window.AudioContext || window.webkitAudioContext;
+
+  var voice = {
+    ctx: null, gain: null, send: function(){}, ready: null, on: false,
+    supported: !!AudioCtx,
+
+    // Build the audio graph once: worklet if the browser will load it,
+    // otherwise the ScriptProcessorNode fallback.
+    setup: function(){
+      var self = this, ctx = this.ctx;
+      this.gain = ctx.createGain();
+      this.gain.gain.value = 0;
+      this.gain.connect(ctx.destination);
+
+      function useWorklet(){
+        var url = URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' }));
+        return ctx.audioWorklet.addModule(url).then(function(){
+          var node = new AudioWorkletNode(ctx, 'wave-voice', { outputChannelCount: [1] });
+          node.connect(self.gain);
+          self.send = function(msg){ node.port.postMessage(msg); };
+        });
+      }
+      function useScriptProcessor(){
+        var dsp = createDsp(ctx.sampleRate);
+        var node = ctx.createScriptProcessor(1024, 1, 1);
+        node.onaudioprocess = function(e){ dsp.render(e.outputBuffer.getChannelData(0)); };
+        node.connect(self.gain);
+        self.send = dsp.set;
+        self.keepAlive = node; // some browsers drop unreferenced processors
+      }
+
+      var worklet = (ctx.audioWorklet && window.AudioWorkletNode) ? useWorklet() : Promise.reject();
+      return worklet.catch(useScriptProcessor).then(function(){
+        self.send({ pitch: PITCH });
+      });
+    },
+
+    // Must be called straight from a click: Safari only lets audio start
+    // inside the user gesture, so the context is created and resumed here
+    // before any asynchronous setup.
+    start: function(){
+      var self = this;
+      if(!this.ctx){
+        this.ctx = new AudioCtx();
+        if(navigator.audioSession) navigator.audioSession.type = 'playback'; // play despite iOS silent switch
+      }
+      var resumed = this.ctx.resume();
+      if(!this.ready) this.ready = this.setup();
+      return Promise.all([resumed, this.ready]).then(function(){
+        self.send({ table: build(state.table), morph: state.morph, pos: state.pos });
+        var g = self.gain.gain, now = self.ctx.currentTime;
+        g.cancelScheduledValues(now);
+        g.setTargetAtTime(.16, now, .02);
+        self.on = true;
+      });
+    },
+
+    stop: function(){
+      if(!this.gain) return;
+      this.gain.gain.setTargetAtTime(0, this.ctx.currentTime, .02);
+      this.on = false;
+    }
+  };
+
+  // ---- automatic sweep: 0 to 59 and back, like a slow envelope ----
+  var sweep = { raf: 0, start: 0 };
+  function sweepFrame(now){
+    if(!sweep.start) sweep.start = now - Math.acos(1 - 2 * state.pos / LAST_TABLE_WAVE) / (2 * Math.PI) * 6000;
+    var t = (now - sweep.start) / 6000;
+    setPos(LAST_TABLE_WAVE * (1 - Math.cos(2 * Math.PI * t)) / 2);
+    sweep.raf = requestAnimationFrame(sweepFrame);
+  }
+  function setSweep(on){
+    cancelAnimationFrame(sweep.raf);
+    sweep.raf = 0;
+    sweep.start = 0;
+    sweepBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if(on){
+      if(state.pos > LAST_TABLE_WAVE) setPos(0);
+      sweep.raf = requestAnimationFrame(sweepFrame);
+    }
+  }
+
+  // ---- controls ----
+  slider.addEventListener('input', function(){ setSweep(false); setPos(+slider.value); });
+
+  select.addEventListener('change', function(){
+    state.table = select.value;
+    voice.send({ table: build(state.table) });
+    render();
+  });
+
+  oscBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      state.morph = b.dataset.osc === '1';
+      oscBtns.forEach(function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+      voice.send({ morph: state.morph });
+      render();
+    });
+  });
+
+  sweepBtn.addEventListener('click', function(){ setSweep(sweepBtn.getAttribute('aria-pressed') !== 'true'); });
+
+  if(!voice.supported){
+    playBtn.disabled = true;
+    playBtn.title = 'This browser cannot play the explorer’s sound';
+  }
+  playBtn.addEventListener('click', function(){
+    if(voice.on){
+      voice.stop();
+      playBtn.setAttribute('aria-pressed', 'false');
+    } else {
+      voice.start().then(function(){ playBtn.setAttribute('aria-pressed', 'true'); })
+        .catch(function(err){
+          console.error('Wavetable explorer: sound failed to start', err);
+          playBtn.disabled = true;
+          playBtn.textContent = 'No sound';
+          playBtn.title = 'Sound failed to start: ' + (err && err.message || err);
+        });
+    }
+  });
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden && voice.on){ voice.stop(); playBtn.setAttribute('aria-pressed', 'false'); }
+  });
+
+  // Click or drag along the header strip to choose a position.
+  strip.classList.add('live');
+  function fromStrip(e){
+    var r = strip.getBoundingClientRect();
+    setPos(Math.floor((e.clientX - r.left) / r.width * WAVES));
+  }
+  strip.addEventListener('pointerdown', function(e){
+    setSweep(false);
+    strip.setPointerCapture(e.pointerId);
+    fromStrip(e);
+  });
+  strip.addEventListener('pointermove', function(e){
+    if(strip.hasPointerCapture(e.pointerId)) fromStrip(e);
+  });
+
+  if(window.ResizeObserver) new ResizeObserver(draw).observe(canvas);
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  render();
 })();
 </script>
 </body>
