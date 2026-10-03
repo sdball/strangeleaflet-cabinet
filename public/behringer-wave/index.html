@@ -1152,7 +1152,7 @@ h3 .chk {
   <h3>What a wavetable actually is</h3>
   <p>Not a sample and not a waveform. It's an ordered list of <strong>64 single-cycle waveforms</strong>, each 128 samples long, stored in a fixed sequence. The Wave holds 30 factory tables plus 64 user slots.</p>
   <p>You don't shape a waveform here the way you'd set a pulse width or blend a saw and a square. You choose a table, then choose a numbered <strong>position</strong> in it — that's what the WAVES-OSC and WAVES-SUB knobs do. Everything expressive follows from modulating that position while a note sounds.</p>
-  <p>The consequence worth sitting with: a wavetable is a <em>route</em>, not a sound. The tables are deliberately arranged so that travelling through them is musical — harmonics stacking up in order, or dark to bright and back, or a series of vowel formants. Choosing a table is choosing what kind of journey a note can take. Two things follow:</p>
+  <p>A wavetable is a <em>route</em>, not a sound. The tables are deliberately arranged so that travelling through them is musical — harmonics stacking up in order, or dark to bright and back, or a series of vowel formants. Choosing a table is choosing what kind of journey a note can take. Two things follow:</p>
   <ul>
     <li>Movement through the table is <strong>stepped</strong>, not continuous. Adjacent waveforms are switched abruptly and the phase discontinuity produces a click or a rasp. That artefact is the sound of early wavetable hardware, and it's optional — the OSC setting in the User menu morphs between adjacent waves instead.</li>
     <li>The <strong>last four positions of every table</strong>, 60 to 63, hold sawtooth, pulse, square and triangle. They're there so you can use the Wave as a conventional analog synth, and they're a nuisance when you sweep through them, which is what the UW setting exists to manage.</li>
@@ -1394,7 +1394,7 @@ h3 .chk {
 
   <div class="note">
     <span class="lbl">The same goes for the global settings</span>
-    <p>The base patch uses <strong>FIRM 0</strong>, <strong>OSC 0</strong> and <strong>LFO 0</strong> — original PPG behaviour throughout, including an LFO that drifts rather than holding a steady rate. That wobble is part of what the instrument sounds like, so it stays on by default. None of these are load-bearing: switch <strong>LFO 1</strong> on whenever you want a rate you can trust to stay put, and every lesson still works either way. Lesson 05 is the only place the difference is really the subject.</p>
+    <p>The base patch uses <strong>FIRM 0</strong>, <strong>OSC 0</strong> and <strong>LFO 0</strong> — original PPG behaviour throughout, including an LFO that drifts rather than holding a steady rate. That wobble is part of what the instrument sounds like, so it stays on by default. Switch <strong>LFO 1</strong> on whenever you want a rate you can trust to stay put, and every lesson still works either way. Lesson 05 is the only place the difference is really the subject.</p>
   </div>
 
   <h3>Holding a note while you change things</h3>
