@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lehmer codes — The Cabinet of Curios</title>
+<meta name="description" content="Turn any order of up to five things into a Lehmer code, and turn the code back into the order, one step at a time.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Page: a parlour card room */
+  --bg: #EEE6D6;
+  --ink: #2A1F1D;
+  --muted: #6B5B52;
+  --line: #CDBFA8;
+  --plate: #F6F0E4;
+  --focus: #9A3B1E;
+  --hi: #F3DFA8;
+
+  /* Panel: oxblood felt, dark in either theme */
+  --felt: #4A1C24;
+  --felt-edge: #6A2C36;
+  --felt-ink: #F3E6D3;
+  --felt-muted: #C9A99E;
+  --felt-slot: #3A141B;
+  --brass: #E0B45C;
+  --brass-ink: #2A1F1D;
+
+  /* Cards stay cream in either theme */
+  --card: #FBF7EE;
+  --card-edge: #D9CDB8;
+  --card-ink: #1F1A17;
+  --card-red: #B3262E;
+
+  --cw: clamp(44px, 13.5vw, 64px);
+  --ch: calc(var(--cw) * 1.38);
+  --gap: clamp(6px, 1.6vw, 10px);
+
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Source Sans 3", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1A1414; --ink: #EDE3D3; --muted: #B3A396; --line: #3A2E2C; --plate: #231B1A;
+    --focus: #F0B07A; --hi: #4A3A1A; --felt: #3A161C; --felt-edge: #5A2630;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1A1414; --ink: #EDE3D3; --muted: #B3A396; --line: #3A2E2C; --plate: #231B1A;
+  --focus: #F0B07A; --hi: #4A3A1A; --felt: #3A161C; --felt-edge: #5A2630;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 1.0625rem/1.5 var(--sans);
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 1.75rem 1.25rem 4rem; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mono { font-family: var(--mono); font-size: .9em; }
+
+.back {
+  display: inline-block;
+  color: var(--muted);
+  font-size: .95rem;
+  text-underline-offset: 3px;
+  margin-bottom: 1.25rem;
+}
+h1 {
+  font: 600 clamp(2.1rem, 6vw, 3.2rem)/1.05 var(--serif);
+  letter-spacing: -0.015em;
+  margin: 0 0 .5rem;
+}
+.lede { margin: 0 0 1.75rem; color: var(--muted); max-width: 62ch; }
+h2 { font: 600 1.35rem/1.2 var(--serif); margin: 0 0 .75rem; }
+
+/* ---------- Panel ---------- */
+.panel {
+  background: var(--felt);
+  color: var(--felt-ink);
+  border: 1px solid var(--felt-edge);
+  border-radius: 12px;
+  padding: 1rem 1rem 1.25rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 32px -24px rgba(40,8,12,.8);
+}
+.panel :focus-visible { outline-color: var(--brass); }
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem 1rem;
+  align-items: center;
+}
+.bar + .bar { margin-top: .6rem; }
+.bar-label { font-size: .9rem; color: var(--felt-muted); }
+
+.seg { display: inline-flex; border: 1px solid var(--felt-edge); border-radius: 6px; overflow: hidden; }
+.seg button {
+  font: 600 .95rem var(--sans);
+  color: var(--felt-muted);
+  background: transparent;
+  border: 0;
+  padding: .4rem .75rem;
+  min-height: 40px;
+  min-width: 40px;
+  cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--felt-edge); }
+.seg button[aria-pressed="true"] { background: var(--felt-edge); color: var(--felt-ink); }
+
+.btn {
+  font: 600 .95rem var(--sans);
+  color: var(--felt-ink);
+  background: transparent;
+  border: 1px solid var(--felt-edge);
+  border-radius: 6px;
+  padding: .4rem .85rem;
+  min-height: 40px;
+  cursor: pointer;
+}
+.btn.go { background: var(--brass); color: var(--brass-ink); border-color: var(--brass); }
+button:disabled { cursor: default; opacity: .45; }
+
+/* ---------- Stage ---------- */
+.stage {
+  margin: 1.25rem 0 .25rem;
+  display: grid;
+  gap: 1rem;
+}
+.row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .75rem;
+  margin: 0 auto .35rem;
+  width: max(17rem, calc(var(--cw) * var(--n, 5) + var(--gap) * (var(--n, 5) - 1)));
+  max-width: 100%;
+  font-size: .9rem;
+  color: var(--felt-muted);
+}
+.row-head b { color: var(--felt-ink); font-weight: 600; }
+.slots {
+  display: flex;
+  justify-content: center;
+  gap: var(--gap);
+}
+.col { display: flex; flex-direction: column; align-items: center; gap: 4px; width: var(--cw); }
+.tag {
+  font: 500 .75rem/1 var(--mono);
+  color: var(--felt-muted);
+  min-width: 1.6em;
+  padding: 3px 4px;
+  border-radius: 999px;
+  text-align: center;
+  transition: background-color .15s, color .15s;
+}
+.slot {
+  position: relative;
+  width: var(--cw);
+  height: var(--ch);
+  border-radius: 7px;
+  background: var(--felt-slot);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.45);
+  transition: box-shadow .2s;
+}
+.slot.dim { background: transparent; box-shadow: inset 0 0 0 1px var(--felt-edge); }
+
+/* counting through the available cards */
+.col.passed .tag { color: var(--felt-ink); background: var(--felt-edge); }
+.col.tick .tag, .col.hit .tag { color: var(--brass-ink); background: var(--brass); }
+.col.hit .slot, .col.active .slot { box-shadow: 0 0 0 3px var(--brass), inset 0 2px 5px rgba(0,0,0,.45); }
+.col.active .tag { color: var(--brass); font-weight: 700; }
+.col.done .tag::after { content: " ✓"; }
+
+/* ---------- Cards ---------- */
+.card {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--card-edge);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--card-ink);
+  font: 700 calc(var(--cw) * .42)/1 var(--serif);
+  box-shadow: 0 2px 0 rgba(0,0,0,.25), 0 6px 12px -6px rgba(0,0,0,.5);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
+  z-index: 1;
+}
+.card:disabled { opacity: 1; cursor: default; }
+.card.red { color: var(--card-red); }
+.card .pip { position: absolute; top: 4px; left: 5px; font: 700 calc(var(--cw) * .2)/1 var(--sans); }
+.card .pip.lo { top: auto; left: auto; bottom: 4px; right: 5px; transform: rotate(180deg); }
+.card .emoji { font-size: calc(var(--cw) * .55); font-family: system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif; }
+.card.lifted { transform: translateY(-10px); box-shadow: 0 0 0 3px var(--brass), 0 14px 18px -8px rgba(0,0,0,.6); }
+.card.moving { z-index: 5; }
+
+/* ---------- Code digits ---------- */
+.digit {
+  width: var(--cw);
+  height: calc(var(--cw) * 1.05);
+  border-radius: 7px;
+  border: 1px solid var(--felt-edge);
+  background: var(--felt-slot);
+  color: var(--brass);
+  font: 700 calc(var(--cw) * .5)/1 var(--mono);
+  cursor: pointer;
+  padding: 0;
+}
+.digit.fixed, .digit:disabled { cursor: default; opacity: 1; }
+.digit.empty { color: transparent; }
+.col.active .digit { box-shadow: 0 0 0 3px var(--brass); }
+.range { font: 500 .72rem/1 var(--mono); color: var(--felt-muted); }
+
+/* the code read as one base-10 number, beside the digits */
+.code-line { position: relative; width: fit-content; margin: 0 auto; }
+.code-eq {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  height: calc(var(--cw) * 1.05);
+  display: flex;
+  align-items: center;
+  padding-left: .9rem;
+  font: 700 calc(var(--cw) * .5)/1 var(--mono);
+  color: var(--brass);
+  white-space: nowrap;
+}
+.code-eq.pending { color: var(--felt-muted); }
+@media (max-width: 760px) {
+  .code-eq {
+    position: static;
+    height: auto;
+    justify-content: center;
+    padding: .5rem 0 0;
+    font-size: 1.5rem;
+  }
+}
+
+.caption {
+  min-height: 4.6em;
+  margin: 1rem auto 0;
+  max-width: 46ch;
+  text-align: center;
+  font-size: 1.05rem;
+}
+.caption .sub { display: block; color: var(--felt-muted); font-size: .95rem; margin-top: .2rem; }
+.caption b { color: var(--brass); font-weight: 600; }
+
+.play {
+  justify-content: center;
+  border-top: 1px solid var(--felt-edge);
+  padding-top: 1rem;
+  margin-top: .75rem;
+}
+
+/* ---------- Readout under the panel ---------- */
+.readout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 1rem 1.5rem;
+  margin: 1.5rem 0 2.5rem;
+}
+.box {
+  background: var(--plate);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+}
+.box h3 { margin: 0 0 .4rem; font-size: .95rem; font-weight: 600; color: var(--muted); }
+.big { font: 700 1.6rem/1.2 var(--mono); }
+.formula { font-family: var(--mono); font-size: .85rem; color: var(--muted); margin: .4rem 0 0; overflow-wrap: anywhere; }
+.sweep {
+  display: grid;
+  gap: .3rem;
+  margin: 1.25rem auto 0;
+  max-width: 36rem;
+}
+.sweep label { font-size: .9rem; color: var(--felt-muted); }
+.rank-ctl { display: flex; align-items: center; gap: .5rem; }
+.rank-ctl input { flex: 1; min-width: 0; margin: 0; accent-color: var(--brass); }
+.rank-ctl button {
+  font: 600 1.1rem var(--sans);
+  min-width: 40px; min-height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--felt-edge);
+  background: transparent;
+  color: var(--felt-ink);
+  cursor: pointer;
+}
+.ends {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 48px;
+  font: 500 .78rem var(--mono);
+  color: var(--felt-muted);
+  white-space: nowrap;
+}
+
+/* ---------- Every order ---------- */
+.orders {
+  list-style: none;
+  margin: 0 0 2.5rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: .4rem;
+}
+.ord {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .5rem;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  background: var(--plate);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: .35rem .6rem;
+  cursor: pointer;
+}
+.ord .items { font-size: .95rem; white-space: nowrap; }
+.ord .items .red { color: var(--card-red); }
+.ord .c { font: 500 .85rem var(--mono); color: var(--muted); white-space: nowrap; }
+.ord[aria-current="true"] { background: var(--hi); border-color: var(--focus); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ord .items .red { color: #F08A8A; }
+}
+:root[data-theme="dark"] .ord .items .red { color: #F08A8A; }
+
+.notes { max-width: 66ch; }
+.notes li { margin-bottom: .55rem; }
+.notes p { margin: 0 0 .9rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tag, .slot { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">The Cabinet of Curios</a>
+  <h1>Lehmer codes</h1>
+  <p class="lede">A Lehmer code writes any order of <i>n</i> things as <i>n</i> small numbers. Each number answers one question: of the things not placed yet, which one comes next? Shuffle the cards, then play the animation to turn the shuffle into a code. Switch direction to turn the code back into the shuffle.</p>
+
+  <section class="panel" aria-label="Lehmer code table">
+    <div class="bar">
+      <span class="bar-label" id="countLabel">Items</span>
+      <div class="seg" role="group" aria-labelledby="countLabel" id="counts"></div>
+      <span class="bar-label" id="setLabel">Using</span>
+      <div class="seg" role="group" aria-labelledby="setLabel" id="sets"></div>
+      <button type="button" class="btn" id="shuffle">Shuffle</button>
+    </div>
+
+    <div class="stage" id="stage">
+      <div>
+        <div class="row-head"><span id="poolHead"></span></div>
+        <div class="slots" id="poolRow"></div>
+      </div>
+      <div>
+        <div class="row-head"><span><b>Shuffle</b> · tap two cards to swap them</span></div>
+        <div class="slots" id="lineRow"></div>
+      </div>
+      <div>
+        <div class="row-head"><span><b>Lehmer code</b> · tap a digit to change it</span></div>
+        <div class="code-line">
+          <div class="slots" id="codeRow"></div>
+          <div class="code-eq" id="codeEq"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sweep">
+      <label for="rankRange">Sweep through every code</label>
+      <div class="rank-ctl">
+        <button type="button" id="prev" aria-label="Previous code">‹</button>
+        <input type="range" id="rankRange" min="0" step="1" value="0">
+        <button type="button" id="next" aria-label="Next code">›</button>
+      </div>
+      <div class="ends"><span id="sweepMin"></span><span id="sweepMax"></span></div>
+    </div>
+
+    <p class="caption" id="caption" aria-live="polite"></p>
+
+    <div class="bar play">
+      <div class="seg" role="group" aria-label="Direction" id="modes">
+        <button type="button" data-mode="encode" aria-pressed="true">Shuffle → code</button>
+        <button type="button" data-mode="decode" aria-pressed="false">Code → shuffle</button>
+      </div>
+      <button type="button" class="btn go" id="playBtn">Play</button>
+      <button type="button" class="btn" id="stepBtn">Step</button>
+      <button type="button" class="btn" id="endBtn" disabled>Finish</button>
+      <div class="seg" role="group" aria-label="Speed" id="speeds">
+        <button type="button" data-speed="0.5">Slow</button>
+        <button type="button" data-speed="1" aria-pressed="true">Normal</button>
+        <button type="button" data-speed="2">Fast</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="readout">
+    <div class="box">
+      <h3 id="rankHead">Rank among all orders</h3>
+      <div class="big" id="rank"></div>
+      <p class="formula" id="formula"></p>
+    </div>
+    <div class="box">
+      <h3>Digit sum = pairs out of order</h3>
+      <div class="big" id="inv"></div>
+      <p class="formula" id="invNote"></p>
+    </div>
+  </div>
+
+  <section aria-labelledby="all-h">
+    <h2 id="all-h">Every order</h2>
+    <p class="notes" id="allNote"></p>
+    <ul class="orders" id="orders"></ul>
+  </section>
+
+  <section class="notes" aria-labelledby="notice-h">
+    <h2 id="notice-h">Things to notice</h2>
+    <ul>
+      <li><b>The digits shrink.</b> The first digit can be 0 to <i>n</i>−1, the next 0 to <i>n</i>−2, and so on. The last digit is always 0, because only one card is left by then.</li>
+      <li><b>One code per order.</b> Multiply the choices and you get <i>n</i> × (<i>n</i>−1) × … × 1 = <i>n</i>! codes, exactly one for each order.</li>
+      <li><b>Two ways to read a digit.</b> A card's index among the available cards equals the number of cards to its right that are smaller. Those are the same cards counted two ways.</li>
+      <li><b>It's a number.</b> Read the code in the factorial number system and you get the order's position in dictionary order. The code 0 0 0 0 0 is the baseline order, and 4 3 2 1 0 is the baseline order reversed.</li>
+      <li><b>Random digits make a fair shuffle.</b> Pick each digit uniformly at random and every order is equally likely. That's essentially the Fisher–Yates shuffle.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+const SETS = {
+  letters: { label: "Letters", items: ["A", "B", "C", "D", "E"].map((face) => ({ face })) },
+  cards: {
+    label: "Cards",
+    items: [
+      { face: "A", suit: "♠" }, { face: "2", suit: "♥", red: true }, { face: "3", suit: "♣" },
+      { face: "4", suit: "♦", red: true }, { face: "5", suit: "♠" },
+    ],
+  },
+  fruit: { label: "Fruit", items: ["🍎", "🍐", "🍊", "🍋", "🍇"].map((emoji) => ({ emoji })) },
+};
+
+const MOVE_MS = 650, TICK_MS = 420, BEAT_MS = 700;
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// state
+let n = 3;
+let setName = "letters";
+let perm = [0, 1, 2];
+let mode = "encode";
+let speed = 1;
+let selected = null;   // order position picked for a swap
+let anim = null;       // the animation in progress, or null when idle
+let playing = false;
+let stepping = false;
+
+// ---------- Lehmer code math ----------
+
+const range = (k) => Array.from({ length: k }, (_, i) => i);
+const fact = (k) => (k <= 1 ? 1 : k * fact(k - 1));
+
+function encode(p) {
+  const pool = range(p.length);
+  return p.map((id) => {
+    const k = pool.indexOf(id);
+    pool.splice(k, 1);
+    return k;
+  });
+}
+
+function decode(code) {
+  const pool = range(code.length);
+  return code.map((k) => pool.splice(k, 1)[0]);
+}
+
+const rankOf = (code) => code.reduce((sum, d, i) => sum + d * fact(code.length - 1 - i), 0);
+
+function codeOf(rank, len) {
+  return range(len).map((i) => {
+    const place = fact(len - 1 - i);
+    const d = Math.floor(rank / place);
+    rank %= place;
+    return d;
+  });
+}
+
+// ---------- Item names ----------
+
+const item = (id) => SETS[setName].items[id];
+const nameOf = (id) => { const it = item(id); return it.emoji || it.face + (it.suit || ""); };
+const nameHTML = (id) => (item(id).red ? `<span class="red">${nameOf(id)}</span>` : nameOf(id));
+
+// ---------- Timing ----------
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms / speed));
+
+// Finish can end an animation mid-step; the step stops at its next pause.
+const CANCELLED = Symbol("cancelled");
+async function hold(a, promise) {
+  try { await promise; } catch (_) { /* a cancelled card animation */ }
+  if (anim !== a) throw CANCELLED;
+}
+const dur = (ms) => (reduced ? 0 : ms / speed);
+const EASE = "cubic-bezier(.2,.7,.2,1)";
+
+// ---------- Stage ----------
+
+const poolRow = $("poolRow"), lineRow = $("lineRow"), codeRow = $("codeRow");
+let poolCols = [], lineCols = [], codeCols = [];
+const cardEls = new Map();   // key -> card element, reused so cards can glide between slots
+
+function buildSlots() {
+  $("stage").style.setProperty("--n", n);
+  const col = (tagText, inner) => {
+    const c = document.createElement("div");
+    c.className = "col";
+    c.innerHTML = `<span class="tag">${tagText}</span>${inner}`;
+    return c;
+  };
+  poolRow.replaceChildren(...(poolCols = range(n).map((i) => col(i, `<div class="slot"></div>`))));
+  lineRow.replaceChildren(...(lineCols = range(n).map((i) => col(`#${i + 1}`, `<div class="slot"></div>`))));
+  codeRow.replaceChildren(...(codeCols = range(n).map((i) => {
+    const c = document.createElement("div");
+    c.className = "col";
+    c.innerHTML = `<button type="button" class="digit"></button><span class="range">0–${n - 1 - i}</span>`;
+    const b = c.querySelector(".digit");
+    b.addEventListener("click", () => bumpDigit(i, 1));
+    b.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp") { e.preventDefault(); bumpDigit(i, 1); }
+      if (e.key === "ArrowDown") { e.preventDefault(); bumpDigit(i, -1); }
+    });
+    return c;
+  })));
+}
+
+function makeCard(key) {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "card";
+  el.dataset.key = key;
+  el.addEventListener("click", () => tapCard(el));
+  return el;
+}
+
+function dressCard(el, id) {
+  const it = item(id);
+  el.dataset.id = id;
+  el.classList.toggle("red", !!it.red);
+  const html = it.emoji
+    ? `<span class="emoji">${it.emoji}</span>`
+    : it.suit
+      ? `<span class="pip">${it.face}${it.suit}</span>${it.suit}<span class="pip lo">${it.face}${it.suit}</span>`
+      : it.face;
+  if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+}
+
+// Put every card where the view says, then slide each from its old spot (FLIP).
+function paint(view) {
+  const before = new Map();
+  for (const [k, el] of cardEls) if (el.isConnected) before.set(k, el.getBoundingClientRect());
+  const focused = document.activeElement;
+
+  const used = new Set();
+  const place = (key, id, col, inLine) => {
+    let el = cardEls.get(key);
+    if (!el) cardEls.set(key, (el = makeCard(key)));
+    dressCard(el, id);
+    el.disabled = !inLine || !!anim;
+    el.dataset.pos = inLine ? col : "";
+    el.setAttribute("aria-label", inLine ? `${nameOf(id)}, position ${col + 1}` : nameOf(id));
+    el.classList.toggle("lifted", inLine && selected === col && !anim);
+    (inLine ? lineCols : poolCols)[col].querySelector(".slot").appendChild(el);
+    used.add(key);
+  };
+  const prefix = view.ghostPool ? "g" : "";
+  view.pool.forEach((id, k) => place(prefix + id, id, k, false));
+  view.line.forEach((id, i) => { if (id != null) place(String(id), id, i, true); });
+
+  for (const [k, el] of cardEls) {
+    if (used.has(k)) continue;
+    cardEls.delete(k);
+    if (!el.isConnected || reduced) { el.remove(); continue; }
+    el.classList.remove("moving");
+    el.style.zIndex = 0;
+    el.animate([{ opacity: getComputedStyle(el).opacity }, { opacity: 0 }], { duration: dur(MOVE_MS * 0.5), fill: "forwards" })
+      .finished.then(() => el.remove(), () => el.remove());
+  }
+
+  poolCols.forEach((c, k) => c.querySelector(".slot").classList.toggle("dim", k >= view.pool.length));
+  $("poolHead").innerHTML = anim ? "<b>Available</b> · in baseline order" : "<b>Baseline order</b>";
+  codeCols.forEach((c, i) => {
+    const b = c.querySelector(".digit");
+    const d = view.code[i];
+    b.textContent = d == null ? "·" : d;
+    b.classList.toggle("empty", d == null);
+    b.classList.toggle("fixed", i === n - 1);
+    b.disabled = !!anim;
+    b.setAttribute("aria-label", d == null ? `Digit ${i + 1}, not yet known` : `Digit ${i + 1}: ${d}, can be 0 to ${n - 1 - i}`);
+  });
+  lineCols.forEach((c, i) => c.classList.toggle("done", !!view.done?.includes(i)));
+
+  const eq = $("codeEq");
+  const known = view.code.every((d) => d != null);
+  const text = known ? `= ${rankOf(view.code)}` : "= ?";
+  eq.classList.toggle("pending", !known);
+  eq.setAttribute("aria-label", known ? `As one number: ${rankOf(view.code)}, out of 0 to ${fact(n) - 1}` : "As one number: not known yet");
+  if (eq.textContent !== text) {
+    eq.textContent = text;
+    if (known && anim) eq.animate([{ transform: "scale(1.3)" }, { transform: "none" }], { duration: dur(400), easing: EASE });
+  }
+
+  if (focused && focused.isConnected && focused !== document.activeElement) focused.focus({ preventScroll: true });
+
+  for (const k of used) {
+    const el = cardEls.get(k);
+    el.getAnimations().forEach((a) => a.cancel());
+    const a = before.get(k), b = el.getBoundingClientRect();
+    if (a) {
+      const dx = a.left - b.left, dy = a.top - b.top;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        el.classList.add("moving");
+        el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: getComputedStyle(el).transform }],
+          { duration: dur(MOVE_MS), easing: EASE })
+          .finished.then(() => el.classList.remove("moving"), () => {});
+      }
+    } else {
+      el.animate([{ opacity: 0, transform: "scale(.85)" }, { opacity: 1, transform: "none" }],
+        { duration: dur(MOVE_MS * 0.6), easing: EASE });
+    }
+  }
+  return wait(MOVE_MS);
+}
+
+function clearMarks() {
+  [...poolCols, ...lineCols, ...codeCols].forEach((c) => c.classList.remove("tick", "hit", "passed", "active"));
+}
+
+const idleView = () => ({ pool: range(n), line: perm, code: encode(perm), ghostPool: true });
+
+// ---------- Readouts ----------
+
+const caption = $("caption");
+function say(main, sub) {
+  caption.innerHTML = main + (sub ? `<span class="sub">${sub}</span>` : "");
+}
+
+function updateReadout() {
+  const code = encode(perm);
+  const r = rankOf(code);
+  $("rank").textContent = r;
+  $("rankHead").textContent = `Rank among all ${fact(n)} orders, counting from 0`;
+  $("formula").textContent = code.map((d, i) => `${d}×${n - 1 - i}!`).join(" + ") + ` = ${r}`;
+  const slider = $("rankRange");
+  slider.max = fact(n) - 1;
+  slider.value = r;
+  slider.setAttribute("aria-valuetext", `Code ${code.join(" ")}, rank ${r} of ${fact(n) - 1}`);
+  $("sweepMin").textContent = "0".repeat(n);
+  $("sweepMax").textContent = range(n).map((i) => n - 1 - i).join("");
+  const inv = code.reduce((a, b) => a + b, 0);
+  $("inv").textContent = inv;
+  $("invNote").textContent = `${code.join(" + ")} = ${inv}. That's how many pairs of items sit in the opposite order from the baseline, out of ${(n * (n - 1)) / 2} possible pairs.`;
+  document.querySelectorAll(".ord").forEach((b) => b.setAttribute("aria-current", +b.dataset.r === r));
+}
+
+function idleCaption() {
+  const code = encode(perm);
+  say(`The shuffle ${perm.map((id) => `<b>${nameHTML(id)}</b>`).join(" ")} has the Lehmer code <b>${code.join(" ")}</b>.`,
+    mode === "encode" ? "Press Play to see how the code is read off the shuffle." : "Press Play to rebuild the shuffle from the code.");
+}
+
+function buildOrders() {
+  const list = $("orders");
+  list.replaceChildren(...range(fact(n)).map((r) => {
+    const code = codeOf(r, n);
+    const li = document.createElement("li");
+    li.innerHTML = `<button type="button" class="ord" data-r="${r}">
+      <span class="items">${decode(code).map(nameHTML).join(" ")}</span><span class="c">${code.join("")}</span></button>`;
+    li.firstElementChild.addEventListener("click", () => { if (!anim) setPerm(decode(code), true); });
+    return li;
+  }));
+  $("all-h").textContent = `Every order (${fact(n)})`;
+  $("allNote").textContent = n === 1
+    ? "One item has one order."
+    : `Listed by Lehmer code. Counting the codes up from ${"0".repeat(n)} walks through every order in dictionary order.`;
+}
+
+// ---------- Idle editing ----------
+
+function setPerm(p, scroll) {
+  perm = p;
+  selected = null;
+  paint(idleView());
+  updateReadout();
+  idleCaption();
+  if (scroll) $("stage").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" });
+}
+
+function tapCard(el) {
+  if (anim || el.dataset.pos === "") return;
+  const pos = +el.dataset.pos;
+  if (selected == null) {
+    selected = pos;
+    paint(idleView());
+    say(`Picked up <b>${nameHTML(perm[pos])}</b>. Tap another card to swap them.`);
+    return;
+  }
+  if (selected === pos) { selected = null; paint(idleView()); idleCaption(); return; }
+  const p = perm.slice();
+  [p[selected], p[pos]] = [p[pos], p[selected]];
+  setPerm(p);
+}
+
+function bumpDigit(i, by) {
+  if (anim || i === n - 1) return;
+  const code = encode(perm);
+  const radix = n - i;
+  code[i] = (code[i] + by + radix) % radix;
+  setPerm(decode(code));
+}
+
+function setN(k) {
+  n = k;
+  perm = range(n);
+  selected = null;
+  document.querySelectorAll("#counts button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.n === n));
+  buildSlots();
+  buildOrders();
+  setPerm(perm);
+}
+
+// ---------- Animation ----------
+
+function startAnim() {
+  selected = null;
+  const code = encode(perm);
+  anim = mode === "encode"
+    ? { mode, i: 0, pool: range(n), line: perm.slice(), code: Array(n).fill(null), done: [] }
+    : { mode, i: 0, pool: range(n), line: Array(n).fill(null), code };
+  setBusy(true);
+  clearMarks();
+  if (mode === "encode") {
+    say("Lay out the available cards in baseline order. Then walk the shuffle left to right.",
+      "Each card's place among the available cards becomes one digit.");
+  } else {
+    say("Gather every card back into baseline order. Then read the code left to right.",
+      "Each digit says which available card to take next.");
+  }
+  return paint(view());
+}
+
+const view = () => ({ pool: anim.pool, line: anim.line, code: anim.code, done: anim.done, ghostPool: anim.mode === "encode" });
+
+async function countTo(a, k) {
+  for (let j = 0; j <= k; j++) {
+    if (j > 0) { poolCols[j - 1].classList.remove("tick"); poolCols[j - 1].classList.add("passed"); }
+    poolCols[j].classList.add("tick");
+    await hold(a, wait(TICK_MS));
+  }
+  poolCols[k].classList.replace("tick", "hit");
+}
+
+async function encodeStep() {
+  const a = anim;
+  const { i } = a;
+  const id = anim.line[i];
+  const k = anim.pool.indexOf(id);
+  clearMarks();
+  lineCols[i].classList.add("active");
+  codeCols[i].classList.add("active");
+  say(`Position ${i + 1} holds <b>${nameHTML(id)}</b>. Where is it among the available cards?`);
+  await hold(a, wait(BEAT_MS));
+  await countTo(a, k);
+
+  const smaller = anim.line.slice(i + 1).filter((x) => x < id).length;
+  say(`<b>${nameHTML(id)}</b> is at index <b>${k}</b>, so digit ${i + 1} is <b>${k}</b>.`,
+    k === 0
+      ? "Nothing available comes before it, and no smaller card sits to its right."
+      : `Same count: ${smaller} smaller card${smaller === 1 ? " sits" : "s sit"} to its right.`);
+  anim.code[i] = k;
+  paint(view());
+  codeCols[i].querySelector(".digit").animate(
+    [{ transform: "scale(1.35)" }, { transform: "none" }], { duration: dur(400), easing: EASE });
+  await hold(a, wait(BEAT_MS));
+
+  // the available copy of the card flies onto the placed card and is used up
+  const ghost = cardEls.get("g" + id);
+  const from = ghost.getBoundingClientRect(), to = lineCols[i].querySelector(".slot").getBoundingClientRect();
+  ghost.classList.add("moving");
+  await hold(a, ghost.animate([{ transform: "none", opacity: 1 }, { transform: `translate(${to.left - from.left}px, ${to.top - from.top}px)`, opacity: 0 }],
+    { duration: dur(MOVE_MS), easing: EASE, fill: "forwards" }).finished);
+  anim.pool.splice(k, 1);
+  anim.done.push(i);
+  clearMarks();
+  await hold(a, paint(view()));
+  anim.i++;
+}
+
+async function decodeStep() {
+  const a = anim;
+  const { i } = a;
+  const k = anim.code[i];
+  clearMarks();
+  codeCols[i].classList.add("active");
+  lineCols[i].classList.add("active");
+  say(`Digit ${i + 1} is <b>${k}</b>: take the available card at index <b>${k}</b>.`);
+  await hold(a, wait(BEAT_MS));
+  await countTo(a, k);
+
+  const id = anim.pool[k];
+  say(`That's <b>${nameHTML(id)}</b>. It goes in position ${i + 1}.`,
+    anim.pool.length > 1 ? `${anim.pool.length - 1} card${anim.pool.length === 2 ? "" : "s"} left to place.` : "That was the last card.");
+  await hold(a, wait(BEAT_MS * 0.6));
+  anim.pool.splice(k, 1);
+  anim.line[i] = id;
+  await hold(a, paint(view()));
+  clearMarks();
+  anim.i++;
+}
+
+function finishAnim() {
+  const wasEncode = anim.mode === "encode";
+  anim = null;
+  for (const el of cardEls.values()) el.getAnimations().forEach((x) => x.cancel());
+  playing = false;
+  setBusy(false);
+  clearMarks();
+  paint(idleView());
+  const code = encode(perm);
+  say(wasEncode
+    ? `Done. The shuffle ${perm.map((id) => `<b>${nameHTML(id)}</b>`).join(" ")} is the code <b>${code.join(" ")}</b>.`
+    : `Done. The code <b>${code.join(" ")}</b> rebuilt the shuffle ${perm.map((id) => `<b>${nameHTML(id)}</b>`).join(" ")}.`,
+    "Change the shuffle or the code, then play it again.");
+}
+
+async function step() {
+  if (stepping) return;
+  stepping = true;
+  try {
+    if (!anim) await startAnim();
+    else if (anim.i < n) await (anim.mode === "encode" ? encodeStep() : decodeStep());
+    if (anim && anim.i >= n) finishAnim();
+  } catch (e) {
+    if (e !== CANCELLED) throw e;
+  } finally {
+    stepping = false;
+  }
+}
+
+async function play() {
+  if (playing) { playing = false; updatePlay(); return; }
+  playing = true;
+  updatePlay();
+  while (playing) {
+    await step();
+    if (!anim) break;
+    await wait(BEAT_MS * 0.5);
+  }
+  playing = false;
+  updatePlay();
+}
+
+function jumpToEnd() {
+  if (!anim) return;
+  playing = false;
+  finishAnim();
+  updatePlay();
+}
+
+const editControls = () => [
+  ...document.querySelectorAll("#counts button, #sets button, #modes button, .ord, .rank-ctl button, .rank-ctl input"),
+  $("shuffle"),
+];
+
+function setBusy(b) {
+  editControls().forEach((el) => (el.disabled = b));
+  $("endBtn").disabled = !b;
+  updatePlay();
+}
+
+function updatePlay() {
+  $("playBtn").textContent = playing ? "Pause" : anim ? "Resume" : "Play";
+  $("stepBtn").disabled = playing;
+}
+
+// ---------- Wiring ----------
+
+$("counts").replaceChildren(...[1, 2, 3, 4, 5].map((k) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.dataset.n = k;
+  b.textContent = k;
+  b.addEventListener("click", () => setN(k));
+  return b;
+}));
+
+$("sets").replaceChildren(...Object.entries(SETS).map(([key, s]) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = s.label;
+  b.setAttribute("aria-pressed", key === setName);
+  b.addEventListener("click", () => {
+    setName = key;
+    document.querySelectorAll("#sets button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    buildOrders();
+    setPerm(perm);
+  });
+  return b;
+}));
+
+document.querySelectorAll("#modes button").forEach((b) => b.addEventListener("click", () => {
+  mode = b.dataset.mode;
+  document.querySelectorAll("#modes button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  idleCaption();
+}));
+
+document.querySelectorAll("#speeds button").forEach((b) => b.addEventListener("click", () => {
+  speed = +b.dataset.speed;
+  document.querySelectorAll("#speeds button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+}));
+
+$("shuffle").addEventListener("click", () => {
+  if (anim) return;
+  // a uniformly random Lehmer code is a uniformly random shuffle
+  const code = range(n).map((i) => Math.floor(Math.random() * (n - i)));
+  setPerm(decode(code));
+});
+
+const stepRank = (by) => {
+  if (anim) return;
+  const total = fact(n);
+  setPerm(decode(codeOf((rankOf(encode(perm)) + by + total) % total, n)));
+};
+$("prev").addEventListener("click", () => stepRank(-1));
+$("next").addEventListener("click", () => stepRank(1));
+$("rankRange").addEventListener("input", (e) => { if (!anim) setPerm(decode(codeOf(+e.target.value, n))); });
+
+$("playBtn").addEventListener("click", play);
+$("stepBtn").addEventListener("click", step);
+$("endBtn").addEventListener("click", jumpToEnd);
+
+setN(3);
+</script>
+</body>
+</html>
