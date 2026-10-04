@@ -604,7 +604,7 @@ footer {
     </div>
 
     <div class="ops" id="ops"></div>
-    <p class="keys">Keyboard: <kbd>~</kbd> invert, <kbd>&lt;</kbd> <kbd>&gt;</kbd> shift, <kbd>[</kbd> <kbd>]</kbd> rotate, <kbd>+</kbd> <kbd>-</kbd> add and subtract, <kbd>r</kbd> random.</p>
+    <p class="keys">Keyboard: <kbd>~</kbd> invert, <kbd>&lt;</kbd> <kbd>&gt;</kbd> shift, <kbd>[</kbd> <kbd>]</kbd> rotate, <kbd>+</kbd> <kbd>-</kbd> add and subtract, <kbd>0</kbd> clear, <kbd>r</kbd> random.</p>
   </section>
 
   <div class="desk">
@@ -1264,7 +1264,7 @@ const OPS = [
       for (let i = 0; i < w; i++) out = out * 2 + bitsOf(v, i, 1);
       return out;
     } },
-  { id: "clr",  label: "Clear",        key: "",  fn: () => 0 },
+  { id: "clr",  label: "Clear",        key: "0", fn: () => 0 },
   { id: "rnd",  label: "Random",       key: "r", fn: (v, w) => Math.floor(Math.random() * P2(w)) },
 ];
 function runOp(id) {
@@ -1280,7 +1280,7 @@ document.addEventListener("keydown", (e) => {
   const t = e.target;
   if (t.matches("input, textarea, select")) return;
   const map = { "~": "not", "<": "shl", ",": "shl", ">": "shr", ".": "shr", "[": "rol", "]": "ror",
-                "+": "inc", "=": "inc", "-": "dec", "r": "rnd" };
+                "+": "inc", "=": "inc", "-": "dec", "0": "clr", "r": "rnd" };
   const id = map[e.key];
   if (id) { e.preventDefault(); runOp(id); }
 });

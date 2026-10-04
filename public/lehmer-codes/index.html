@@ -395,9 +395,9 @@ button:disabled { cursor: default; opacity: .45; }
     <div class="sweep">
       <label for="rankRange">Sweep through every code</label>
       <div class="rank-ctl">
-        <button type="button" id="prev" aria-label="Previous code">‹</button>
+        <button type="button" id="prev" aria-label="Previous code" aria-keyshortcuts="-" title="Shortcut: -">‹</button>
         <input type="range" id="rankRange" min="0" step="1" value="0">
-        <button type="button" id="next" aria-label="Next code">›</button>
+        <button type="button" id="next" aria-label="Next code" aria-keyshortcuts="+" title="Shortcut: +">›</button>
       </div>
       <div class="ends"><span id="sweepMin"></span><span id="sweepMax"></span></div>
     </div>
@@ -958,6 +958,13 @@ const stepRank = (by) => {
 };
 $("prev").addEventListener("click", () => stepRank(-1));
 $("next").addEventListener("click", () => stepRank(1));
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.matches("input, textarea, select")) return;
+  if (e.key === "0") { e.preventDefault(); if (!anim) setPerm(decode(codeOf(0, n))); return; }
+  const by = { "+": 1, "=": 1, "-": -1 }[e.key];
+  if (by) { e.preventDefault(); stepRank(by); }
+});
 $("rankRange").addEventListener("input", (e) => { if (!anim) setPerm(decode(codeOf(+e.target.value, n))); });
 
 $("playBtn").addEventListener("click", play);
