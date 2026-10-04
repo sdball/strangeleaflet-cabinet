@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Odometers — The Cabinet of Curios</title>
+<meta name="description" content="Count on odometers whose wheels have 10 positions, 2 positions, clock positions, or factorial positions, and see why each wheel is worth what it is.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔢</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Page: a pale steel garage wall */
+  --bg: #E4E7E3;
+  --ink: #1E2328;
+  --muted: #59626B;
+  --line: #C3C9C4;
+  --plate: #F2F4F1;
+  --focus: #1F5FA8;
+  --hi: #F4E3B5;
+
+  /* Panel: an instrument cluster, dark in either theme */
+  --dash: #22272C;
+  --dash-edge: #3A4148;
+  --dash-ink: #ECEFF1;
+  --dash-muted: #9AA5AE;
+  --drum: #0D0F11;
+  --drum-ink: #F6F3EA;
+  --amber: #F2B441;
+  --amber-ink: #1E2328;
+
+  --serif: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --sans: "IBM Plex Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15181B; --ink: #E6E9EB; --muted: #A1AAB2; --line: #30363C; --plate: #1D2125;
+    --focus: #8AB4F8; --hi: #4A3C17; --dash: #1B1F23; --dash-edge: #353C43;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15181B; --ink: #E6E9EB; --muted: #A1AAB2; --line: #30363C; --plate: #1D2125;
+  --focus: #8AB4F8; --hi: #4A3C17; --dash: #1B1F23; --dash-edge: #353C43;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 1.0625rem/1.5 var(--sans);
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 1.25rem 1.25rem 4rem; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.back {
+  display: inline-block;
+  color: var(--muted);
+  font-size: .95rem;
+  text-underline-offset: 3px;
+  margin-bottom: 1rem;
+}
+h1 {
+  font: 700 clamp(2.1rem, 6vw, 3.2rem)/1.05 var(--serif);
+  letter-spacing: -0.02em;
+  margin: 0 0 .5rem;
+}
+.lede { margin: 0 0 1.1rem; color: var(--muted); max-width: 62ch; }
+h2 { font: 700 1.35rem/1.2 var(--serif); margin: 0 0 .75rem; }
+
+/* ---------- Panel ---------- */
+.panel {
+  background: var(--dash);
+  color: var(--dash-ink);
+  border: 1px solid var(--dash-edge);
+  border-radius: 14px;
+  padding: 1rem 1rem 1.1rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 18px 32px -24px rgba(0,0,0,.8);
+}
+.panel :focus-visible { outline-color: var(--amber); }
+.panel a { color: var(--amber); }
+
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--dash-edge); border-radius: 6px; overflow: hidden; }
+.seg button {
+  font: 600 .95rem var(--sans);
+  color: var(--dash-muted);
+  background: transparent;
+  border: 0;
+  padding: .4rem .8rem;
+  min-height: 40px;
+  cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--dash-edge); }
+.seg button[aria-pressed="true"] { background: var(--dash-edge); color: var(--dash-ink); }
+
+#presets { display: flex; max-width: 30rem; }
+#presets button { flex: 1; padding: .4rem .35rem; }
+.note { margin: .6rem 0 0; font-size: .95rem; color: var(--dash-muted); min-height: 1.5em; }
+
+/* ---------- Wheels ---------- */
+.wheels {
+  --rh: calc(var(--ww) * var(--rh-k, .9));
+  display: flex;
+  justify-content: center;
+  gap: var(--wg, 8px);
+  margin: 1rem 0 .25rem;
+}
+.wcol { display: flex; flex-direction: column; align-items: center; gap: 3px; width: var(--ww); }
+.wname { font-size: .78rem; color: var(--dash-muted); min-height: 1.1em; white-space: nowrap; }
+.drum {
+  position: relative;
+  width: var(--ww);
+  height: calc(var(--rh) * 1.6);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #000;
+  border-radius: 6px;
+  background: var(--drum);
+  color: var(--drum-ink);
+  cursor: pointer;
+  box-shadow: 0 0 0 3px var(--dash-edge);
+  -webkit-tap-highlight-color: transparent;
+}
+.drum.fixed { cursor: default; }
+/* shade the drum so it reads as a cylinder */
+.drum::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(#000 0%, transparent 32%, transparent 68%, #000 100%);
+  opacity: .85;
+}
+.strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--rh) * -0.7);
+  display: flex;
+  flex-direction: column;
+}
+.strip span {
+  height: var(--rh);
+  display: grid;
+  place-items: center;
+  font: 700 var(--fs) / 1 var(--mono);
+}
+.wcol.carry .drum { box-shadow: 0 0 0 3px var(--amber); }
+.wcol.turned .drum { box-shadow: 0 0 0 3px var(--dash-ink); }
+.range { font: 500 .72rem/1 var(--mono); color: var(--dash-muted); margin-top: 4px; }
+.place { font: 700 .85rem/1 var(--mono); color: var(--dash-ink); white-space: nowrap; }
+.why { font: 500 .7rem/1 var(--mono); color: var(--dash-muted); white-space: nowrap; }
+
+.sum {
+  margin: .7rem auto 0;
+  text-align: center;
+  font: 500 .92rem/1.5 var(--mono);
+}
+.sum b { color: var(--amber); font-size: 1.15em; }
+
+/* Room for the longest caption at each width, so the controls never jump. */
+.caption {
+  min-height: 6.1rem;
+  margin: .6rem auto 0;
+  max-width: 52ch;
+  text-align: center;
+}
+.caption .sub { display: block; color: var(--dash-muted); font-size: .95rem; }
+@media (max-width: 599px) { .caption { min-height: 7.7rem; } }
+@media (max-width: 430px) { .caption { min-height: 10.7rem; } }
+@media (max-width: 359px) { .caption { min-height: 12.3rem; } }
+.caption b { color: var(--amber); font-weight: 600; }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: .6rem;
+  border-top: 1px solid var(--dash-edge);
+  padding-top: .85rem;
+  margin-top: .6rem;
+}
+.btn {
+  font: 600 .95rem var(--sans);
+  color: var(--dash-ink);
+  background: transparent;
+  border: 1px solid var(--dash-edge);
+  border-radius: 6px;
+  padding: .4rem .85rem;
+  min-height: 40px;
+  min-width: 44px;
+  cursor: pointer;
+}
+.btn.mono { font-family: var(--mono); }
+.caption kbd { font: 500 .85em var(--mono); color: var(--dash-ink); }
+.btn.go { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
+.sweep { flex: 1 1 16rem; display: flex; align-items: center; gap: .6rem; max-width: 36rem; }
+.sweep label { font-size: .9rem; color: var(--dash-muted); white-space: nowrap; }
+.sweep input { flex: 1; min-width: 0; margin: 0; accent-color: var(--amber); }
+
+/* ---------- Same number, every odometer ---------- */
+.compare { margin: 2rem 0 2.5rem; }
+.compare table { width: 100%; border-collapse: collapse; }
+.compare th, .compare td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); }
+.compare th { font-size: .9rem; font-weight: 600; color: var(--muted); }
+.compare td.reading { font: 500 1rem var(--mono); white-space: nowrap; }
+.compare td.cap { color: var(--muted); font-size: .95rem; }
+.compare td.cap span { white-space: nowrap; }
+.compare tr[aria-current="true"] td { background: var(--hi); }
+.compare button {
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.table-wrap { overflow-x: auto; }
+
+.notes { max-width: 66ch; }
+.notes li { margin-bottom: .55rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">The Cabinet of Curios</a>
+  <h1>Odometers</h1>
+  <p class="lede">A number system is an odometer: a row of wheels that roll over and carry into the next wheel. Change how many positions each wheel has and you get base 10, binary, a clock, or the factorial base that Lehmer codes use.</p>
+
+  <section class="panel" aria-label="Odometer">
+    <div class="seg" role="group" aria-label="Odometer" id="presets"></div>
+    <p class="note" id="note"></p>
+
+    <div class="wheels" id="wheels" role="group" aria-label="Wheels, leftmost first"></div>
+    <p class="sum" id="sum"></p>
+    <p class="caption" id="caption" aria-live="polite"></p>
+
+    <div class="controls">
+      <button type="button" class="btn mono" id="down" aria-label="Count down by one" aria-keyshortcuts="-">−1</button>
+      <button type="button" class="btn mono" id="up" aria-label="Count up by one" aria-keyshortcuts="+">+1</button>
+      <button type="button" class="btn go" id="run">Run</button>
+      <div class="seg" role="group" aria-label="Speed" id="speeds">
+        <button type="button" data-speed="1">Slow</button>
+        <button type="button" data-speed="4" aria-pressed="true">Normal</button>
+        <button type="button" data-speed="16">Fast</button>
+      </div>
+      <div class="sweep">
+        <label for="sweep">Jump</label>
+        <input type="range" id="sweep" min="0" step="1" value="0">
+      </div>
+    </div>
+  </section>
+
+  <section class="compare" aria-labelledby="compare-h">
+    <h2 id="compare-h">The same number on every odometer</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Odometer</th><th>Reading</th><th>Holds</th></tr></thead>
+        <tbody id="compareRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="notes" aria-labelledby="notice-h">
+    <h2 id="notice-h">Things to notice</h2>
+    <ul>
+      <li><b>A wheel is worth what the wheels to its right can count.</b> A turn of the tens wheel comes after the ones wheel shows all 10 readings. A turn of the minutes wheel comes after the seconds wheel shows all 60. Multiply the sizes of the wheels to the right and you get the wheel's place value.</li>
+      <li><b>Same-sized wheels give powers.</b> When every wheel has 10 positions the place values are 1, 10, 10 × 10, 10 × 10 × 10. With 2 positions they're 1, 2, 4, 8, 16 and so on.</li>
+      <li><b>You already use mixed wheels.</b> A clock's seconds and minutes roll over at 60 but its hours roll over at 24. Nobody finds that strange, and it's the same idea as the factorial base.</li>
+      <li><b>The factorial base grows its wheels one at a time.</b> Reading from the right, the wheels have 1, 2, 3, 4 and 5 positions, so the place values are 1, 1, 2 × 1, 3 × 2 × 1, 4 × 3 × 2 × 1: the factorials.</li>
+      <li><b>That's why it fits shuffles.</b> In a <a href="../lehmer-codes/">Lehmer code</a> the first card is picked from 5, the next from 4, and so on, so each digit is a wheel with one fewer position than the last. Five wheels hold 5 × 4 × 3 × 2 × 1 = 120 readings, one for every order of five things.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// Wheels are listed left to right. "ww" is the widest a wheel gets and "vw" how much of
+// the screen width it may take, so eight binary wheels still fit on a phone.
+const PRESETS = {
+  decimal: {
+    label: "Base 10", sizes: [10, 10, 10, 10], ww: 60, vw: 15, holds: "10⁴",
+    names: ["thousands", "hundreds", "tens", "ones"],
+    note: "Every wheel has 10 positions.",
+    why: (k) => (k === 0 ? "" : k === 1 ? "10" : `10${sup(k)}`),
+  },
+  binary: {
+    label: "Base 2", sizes: [2, 2, 2, 2, 2, 2, 2, 2], ww: 44, vw: 8.6, holds: "2⁸",
+    note: "Every wheel has 2 positions.",
+    why: (k) => (k === 0 ? "" : k === 1 ? "2" : `2${sup(k)}`),
+  },
+  clock: {
+    label: "Clock", sizes: [24, 60, 60], ww: 84, vw: 21, pad: 2, sep: ":", holds: "24×60×60",
+    names: ["hours", "minutes", "seconds"],
+    note: "Seconds and minutes have 60 positions and hours have 24. Mixed wheels you already know.",
+    why: (k) => (k === 0 ? "" : k === 1 ? "60" : "60×60"),
+  },
+  factorial: {
+    label: "Factorial", sizes: [5, 4, 3, 2, 1], ww: 60, vw: 13, sep: " ", holds: "5!",
+    note: 'Wheels with 5, 4, 3, 2 and 1 positions. This is how <a href="../lehmer-codes/">Lehmer codes</a> count.',
+    why: (k) => (k === 0 ? "0!" : `${k}!`),
+  },
+};
+
+const SUPS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const sup = (k) => String(k).split("").map((d) => SUPS[d]).join("");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// state
+let presetName = "decimal";
+let value = 0;
+let speed = 4;          // counts per second while running
+let running = false;
+let rolling = false;
+
+const P = () => PRESETS[presetName];
+const total = (p = P()) => p.sizes.reduce((a, b) => a * b, 1);
+
+// place value of wheel i: how many readings the wheels to its right can show
+const placeOf = (p, i) => p.sizes.slice(i + 1).reduce((a, b) => a * b, 1);
+
+function digitsOf(v, p = P()) {
+  return p.sizes.map((_, i) => Math.floor(v / placeOf(p, i)) % p.sizes[i]);
+}
+const show = (d, p = P()) => String(d).padStart(p.pad || 1, "0");
+const reading = (v, p) => digitsOf(v, p).map((d) => show(d, p)).join(p.sep ?? "");
+
+// how a wheel is named in sentences
+function wheelName(i) {
+  const p = P();
+  return p.names ? `${p.names[i]} wheel` : `×${placeOf(p, i)} wheel`;
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ---------- Wheels ----------
+
+const wheelsEl = $("wheels");
+let cols = [];
+
+function buildWheels() {
+  const p = P();
+  wheelsEl.style.setProperty("--ww", `min(${p.ww}px, ${p.vw}vw)`);
+  wheelsEl.style.setProperty("--wg", p.sizes.length > 6 ? "5px" : "8px");
+  wheelsEl.style.setProperty("--fs", `calc(var(--ww) * ${p.pad ? 0.42 : 0.55})`);
+  wheelsEl.style.setProperty("--rh-k", p.pad ? 0.62 : 0.9);
+  cols = p.sizes.map((size, i) => {
+    const k = p.sizes.length - 1 - i;
+    const place = placeOf(p, i);
+    const c = document.createElement("div");
+    c.className = "wcol";
+    c.innerHTML = `
+      <span class="wname">${p.names ? p.names[i] : ""}</span>
+      <button type="button" class="drum${size === 1 ? " fixed" : ""}"><span class="strip"><span></span><span></span><span></span></span></button>
+      <span class="range">0–${size - 1}</span>
+      <span class="place">×${place}</span>
+      <span class="why">${p.why(k)}</span>`;
+    const drum = c.querySelector(".drum");
+    drum.addEventListener("click", () => turn(i, 1));
+    drum.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp") { e.preventDefault(); turn(i, 1); }
+      if (e.key === "ArrowDown") { e.preventDefault(); turn(i, -1); }
+    });
+    return c;
+  });
+  wheelsEl.replaceChildren(...cols);
+}
+
+// write a digit and its neighbours onto a drum's strip
+function setDrum(i, d, p = P(), col = cols[i]) {
+  const size = p.sizes[i];
+  const [prev, cur, next] = col.querySelectorAll(".strip span");
+  prev.textContent = show((d - 1 + size) % size);
+  cur.textContent = show(d);
+  next.textContent = show((d + 1) % size);
+  const drum = col.querySelector(".drum");
+  drum.setAttribute("aria-label", `${p.names ? p.names[i] : `Wheel worth ${placeOf(p, i)}`}: ${d}, of 0 to ${size - 1}`);
+}
+
+// roll a drum one position: the strip slides, then the faces are rewritten
+async function rollDrum(i, d, by, ms, p = P(), col = cols[i]) {
+  const strip = col.querySelector(".strip");
+  const rh = strip.firstElementChild.getBoundingClientRect().height;
+  if (!reduced && ms > 0) {
+    await strip.animate([{ transform: "none" }, { transform: `translateY(${-by * rh}px)` }],
+      { duration: ms, easing: "cubic-bezier(.3,.1,.3,1)" }).finished;
+  }
+  setDrum(i, d, p, col);
+}
+
+function paint() {
+  const p = P();
+  const ds = digitsOf(value);
+  ds.forEach((d, i) => setDrum(i, d));
+  $("sum").innerHTML = ds.map((d, i) => `${d}×${placeOf(p, i)}`).join(" + ") + ` = <b>${value}</b>`;
+  const sweep = $("sweep");
+  sweep.max = total() - 1;
+  sweep.value = value;
+  sweep.setAttribute("aria-valuetext", `${reading(value, p)}, which is ${value}`);
+  paintCompare();
+}
+
+function clearMarks() { cols.forEach((c) => c.classList.remove("carry", "turned")); }
+
+// ---------- Captions ----------
+
+const caption = $("caption");
+function say(main, sub) { caption.innerHTML = main + (sub ? `<span class="sub">${sub}</span>` : ""); }
+
+// why wheel i is worth what it is
+function placeWhy(i) {
+  const p = P();
+  const right = p.sizes.slice(i + 1);
+  if (!right.length) return "The rightmost wheel is worth 1.";
+  const place = placeOf(p, i);
+  const same = right.length > 2 && right.every((x) => x === right[0]);
+  const product = right.length === 1 ? "" : `${same ? `${right[0]}${sup(right.length)}` : right.join(" × ")} = `;
+  return `The ${wheelName(i)} is worth ${product}${place}: it turns once per full lap of the ${right.length === 1 ? "wheel" : "wheels"} to its right.`;
+}
+
+function idleCaption() {
+  say(`Reading <b>${reading(value, P())}</b> is the number <b>${value}</b>.`,
+    "Press +1 or the <kbd>+</kbd> key to count (<kbd>-</kbd> counts down, <kbd>0</kbd> clears), or tap a wheel to turn just that wheel.");
+}
+
+// ---------- Counting ----------
+
+async function count(by, quiet) {
+  if (rolling) return;
+  rolling = true;
+  const p = P(), mine = cols;
+  const old = digitsOf(value);
+  const next = (value + by + total()) % total();
+  const ds = digitsOf(next);
+  // wheels that change, rightmost first: every one but the last rolled over
+  const changed = p.sizes.map((_, i) => i).filter((i) => ds[i] !== old[i]).reverse();
+  const ms = Math.min(260, 700 / speed);
+  const wrapped = by > 0 ? next === 0 : next === total() - 1;
+  clearMarks();
+  // the leftmost wheel that moved is the one that really turned; the rest rolled over
+  changed.forEach((i, n) => cols[i].classList.add(n === changed.length - 1 && !wrapped ? "turned" : "carry"));
+  await Promise.all(changed.map((i, n) => wait(n * ms * 0.35).then(() => rollDrum(i, ds[i], by, ms, p, mine[i]))));
+  if (P() !== p) { rolling = false; return; }
+  value = next;
+  paint();
+  if (!running) setTimeout(clearMarks, 250); else clearMarks();
+  rolling = false;
+  if (quiet) return;
+
+  if (wrapped) {
+    say(by > 0
+      ? `Every wheel rolled over: back to <b>${reading(0, p)}</b>.`
+      : `Every wheel rolled back to its top: <b>${reading(next, p)}</b> = <b>${next}</b>.`,
+      `This odometer holds ${p.sizes.join(" × ")} = ${total()} readings, from 0 to ${total() - 1}.`);
+    return;
+  }
+  const mover = changed[changed.length - 1];
+  const carried = changed.slice(0, -1);
+  // name the wheels that rolled over without letting a long carry run on
+  const short = (i) => (p.names ? p.names[i] : `×${placeOf(p, i)}`);
+  const who = carried.length === 1 ? `The ${wheelName(carried[0])}`
+    : carried.length === 2 ? `The ${short(carried[0])} and ${short(carried[1])} wheels`
+    : `The ${carried.length} wheels on the right`;
+  const carryText = !carried.length ? "" : by > 0 ? `${who} rolled over and carried: ` : `${who} rolled back and borrowed: `;
+  const moved = `the ${wheelName(mover)} went ${old[mover]} → ${ds[mover]}.`;
+  say(`${by > 0 ? "+1" : "−1"}: ${carryText || "T"}${carryText ? moved : moved.slice(1)} Now <b>${reading(next, p)}</b> = <b>${next}</b>.`,
+    carried.length ? placeWhy(mover) : "");
+}
+
+// spin every wheel forward to 0, like resetting a trip meter
+async function clearAll() {
+  if (running) { running = false; updateRun(); }
+  while (rolling) await wait(20);
+  const p = P(), mine = cols;
+  const nonzero = digitsOf(value).map((d, i) => (d ? i : -1)).filter((i) => i >= 0);
+  if (nonzero.length) {
+    rolling = true;
+    clearMarks();
+    nonzero.forEach((i) => cols[i].classList.add("turned"));
+    await Promise.all(nonzero.map((i) => rollDrum(i, 0, 1, 260, p, mine[i])));
+    rolling = false;
+    if (P() !== p) return;
+    value = 0;
+    paint();
+    setTimeout(clearMarks, 250);
+  }
+  say(`Cleared to <b>${reading(0, p)}</b>.`, "Press + to count up from zero.");
+}
+
+async function turn(i, by) {
+  if (running || rolling) return;
+  const p = P(), size = p.sizes[i];
+  if (size === 1) {
+    say("This wheel has only one position, so it always reads 0.",
+      "The factorial base keeps it so a code has one digit per card.");
+    return;
+  }
+  rolling = true;
+  const ds = digitsOf(value);
+  ds[i] = (ds[i] + by + size) % size;
+  clearMarks();
+  cols[i].classList.add("turned");
+  await rollDrum(i, ds[i], by, 220, p, cols[i]);
+  if (P() !== p) { rolling = false; return; }
+  value = ds.reduce((sum, d, j) => sum + d * placeOf(p, j), 0);
+  paint();
+  setTimeout(clearMarks, 300);
+  rolling = false;
+  say(`Turned the ${wheelName(i)} to ${ds[i]}. Now <b>${reading(value, p)}</b> = <b>${value}</b>.`, placeWhy(i));
+}
+
+async function run() {
+  if (running) { running = false; updateRun(); return; }
+  running = true;
+  updateRun();
+  say("Counting up…", "Watch the right wheel spin and the others turn only when it rolls over.");
+  while (running) {
+    await count(1, true);
+    say(`Counting up: <b>${reading(value, P())}</b> = <b>${value}</b>`,
+      "Watch the right wheel spin and the others turn only when it rolls over.");
+    await wait(1000 / speed);
+  }
+  idleCaption();
+}
+
+function updateRun() {
+  $("run").textContent = running ? "Stop" : "Run";
+  ["up", "down", "sweep"].forEach((id) => ($(id).disabled = running));
+}
+
+// ---------- Compare ----------
+
+function buildCompare() {
+  $("compareRows").replaceChildren(...Object.entries(PRESETS).map(([key, p]) => {
+    const tr = document.createElement("tr");
+    tr.dataset.key = key;
+    tr.innerHTML = `<td><button type="button">${p.label}</button></td><td class="reading"></td>
+      <td class="cap"><span>${p.holds}</span> <span>= ${total(p)}</span></td>`;
+    tr.querySelector("button").addEventListener("click", () => setPreset(key, true));
+    return tr;
+  }));
+}
+
+function paintCompare() {
+  document.querySelectorAll("#compareRows tr").forEach((tr) => {
+    const p = PRESETS[tr.dataset.key];
+    tr.querySelector(".reading").textContent = value < total(p) ? reading(value, p) : "too big";
+    tr.setAttribute("aria-current", tr.dataset.key === presetName);
+  });
+}
+
+// ---------- Wiring ----------
+
+function setPreset(key, scroll) {
+  running = false;
+  updateRun();
+  presetName = key;
+  document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.key === key));
+  $("note").innerHTML = P().note;
+  // keep the number if it fits; otherwise wrap it like the odometer would
+  value %= total();
+  buildWheels();
+  paint();
+  idleCaption();
+  if (scroll) document.querySelector(".panel").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" });
+}
+
+$("presets").replaceChildren(...Object.entries(PRESETS).map(([key, p]) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.dataset.key = key;
+  b.textContent = p.label;
+  b.addEventListener("click", () => setPreset(key));
+  return b;
+}));
+
+document.querySelectorAll("#speeds button").forEach((b) => b.addEventListener("click", () => {
+  speed = +b.dataset.speed;
+  document.querySelectorAll("#speeds button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+}));
+
+$("up").addEventListener("click", () => { if (!running) count(1); });
+$("down").addEventListener("click", () => { if (!running) count(-1); });
+$("run").addEventListener("click", run);
+
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.matches("input:not([type=range]), textarea, select")) return;
+  if (e.key === "0") { e.preventDefault(); clearAll(); return; }
+  const by = { "+": 1, "=": 1, "-": -1, "_": -1, "−": -1 }[e.key];
+  if (!by) return;
+  e.preventDefault();
+  if (!running) count(by);
+});
+$("sweep").addEventListener("input", (e) => {
+  if (running || rolling) return;
+  value = +e.target.value;
+  clearMarks();
+  paint();
+  idleCaption();
+});
+
+buildCompare();
+setPreset("decimal");
+</script>
+</body>
+</html>
