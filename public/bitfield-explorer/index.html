@@ -422,6 +422,11 @@ h2 {
 }
 
 .legend code { color: var(--muted); }
+.legend .eq {
+  display: inline-block;
+  min-width: var(--n);
+  font-variant-numeric: tabular-nums;
+}
 
 .fmt {
   margin: 0 0 1rem;
@@ -442,7 +447,7 @@ h2 {
   font-family: var(--sans);
   font-size: clamp(1.5rem, 4.2vw, 2.2rem);
 }
-.big.invalid {
+.big.invalid, .big .invalid {
   color: var(--muted);
   font-weight: 400;
 }
@@ -452,6 +457,7 @@ h2 {
   grid-template-columns: max-content minmax(0, 1fr);
   gap: .5rem 1.25rem;
   margin: 0 0 1rem; }
+.kv > div { display: contents; }
 .kv dt { color: var(--muted); }
 .kv dd {
   margin: 0;
@@ -466,6 +472,11 @@ h2 {
   margin-right: .4rem;
   vertical-align: -.1rem;
 }
+
+/* Stack a value over hidden copies of its longest alternatives, so the box keeps one size as values change */
+.stack { display: grid; }
+.stack > * { grid-area: 1 / 1; }
+.stack > .ghost { visibility: hidden; }
 
 .tiles {
   display: flex;
@@ -497,7 +508,7 @@ h2 {
   font: 400 .8rem var(--mono);
 }
 .tile small {
-  display: block;
+  display: grid;
   color: var(--muted);
   font-size: .85rem;
   margin-top: .25rem;
@@ -571,6 +582,8 @@ footer {
   .brk { display: block; }
   .reg { grid-template-columns: 1fr; }
   .msg { grid-column: 1; }
+  .kv { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
+  .kv dd { margin-bottom: .55rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .paddle, .lamp { transition: none; }
@@ -611,7 +624,7 @@ footer {
     <section aria-labelledby="numbers-h">
       <h2 id="numbers-h">As numbers</h2>
       <div id="registers"></div>
-      <p class="count" id="count"></p>
+      <p class="count stack"><span id="count"></span><span class="ghost" id="countGhost" aria-hidden="true"></span></p>
     </section>
 
     <section class="lens" aria-labelledby="lens-h">
@@ -690,6 +703,7 @@ function describeByte(b) {
   if (b === 160) return { glyph: "\u237D", note: "Not ASCII. No-break space in Latin-1" };
   return { glyph: String.fromCharCode(b), note: "Not ASCII. Shown as Latin-1" };
 }
+const BYTE_NOTES = [...new Set(Array.from({ length: 256 }, (_, b) => describeByte(b).note))];
 const uplus = (n) => "U+" + hex(n, 4);
 function describeCodePoint(cp, unitOnly) {
   if (cp > 0x10FFFF) return `${uplus(cp)} is past the end of Unicode, which stops at U+10FFFF`;
@@ -782,14 +796,31 @@ function parseFloatInput(raw) {
   return Number(s);
 }
 
+const FLOAT_KINDS = { normal: "Normal", sub: "Subnormal, with reduced precision near zero", zero: "Zero",
+                      inf: "Infinity", nan: "Not a number (NaN)" };
+const floatExpAlts = ({ E }) => {
+  const bias = P2(E - 1) - 1;
+  return [`${P2(E) - 2} − ${bias} = ${P2(E) - 2 - bias}`, `0, read as 1 − ${bias} = ${1 - bias}`, `${P2(E) - 1}, all ones, reserved for infinity`];
+};
+const floatSigAlts = ({ F }) => [
+  `1.${"1".repeat(F)} in binary, which is ${exactDecimal(P2(F + 1) - 1, -F)}`,
+  `0.${"0".repeat(F - 1)}1 in binary, which is ${exactDecimal(1, -F)}`,
+  "Fraction is not zero, so this is NaN",
+];
+
 // ---------- Lenses ----------
 // Each lens: name, widths, fields(w) MSB-first, html(w), update(v, w, root), bind(root, w).
-const row = (label, key) => `<div><dt>${label}</dt><dd data-k="${key}"></dd></div>`;
+const ghosts = (list) => list.map((g) => `<span class="ghost" aria-hidden="true">${g}</span>`).join("");
+const row = (label, key, alts) => `<div><dt>${label}</dt>${alts
+  ? `<dd class="stack"><span data-k="${key}"></span>${ghosts(alts)}</dd>`
+  : `<dd data-k="${key}"></dd>`}</div>`;
 const kv = (...rows) => `<dl class="kv">${rows.join("")}</dl>`;
 const put = (root, key, html) => { const el = root.querySelector(`[data-k="${key}"]`); if (el) el.innerHTML = html; };
 const daysIn = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const pad2 = (n) => String(n).padStart(2, "0");
+const dosDateText = (y, m, d) => new Intl.DateTimeFormat(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
+  .format(Date.UTC(y, m - 1, d));
 
 const LENSES = {
   text: {
@@ -801,8 +832,8 @@ const LENSES = {
     html: (w) => `
       <div class="tiles" data-k="tiles"></div>
       ${kv(
-        w === 16 ? row("As one UTF-16 code unit", "unit") : "",
-        w === 32 ? row("As a Unicode code point", "cp") : "",
+        w === 16 ? row("As one UTF-16 code unit", "unit", [0x41, 0x1F, 0x7F, 0xD800, 0xDC00, 0xFFFE].map((cp) => describeCodePoint(cp, true))) : "",
+        w === 32 ? row("As a Unicode code point", "cp", [0x41, 0x1F600, 0x1F, 0xD800, 0x10FFFE, 0xFFFFFFFF].map((cp) => describeCodePoint(cp, false))) : "",
         w > 8 ? row("Little-endian byte order", "le") : "",
       )}
       ${w > 8 ? `<p class="fmt">Each byte read as an ASCII character, left to right. Most CPUs, including x86 and ARM, store the low byte first in memory, which is the little-endian order above.</p>`
@@ -814,7 +845,7 @@ const LENSES = {
         return `<div class="tile" style="--c:${f.color}">
           <span class="glyph" aria-hidden="true">${esc(d.glyph)}</span>
           <span class="nums"><span>0x${hex(b)}</span><span>${b}</span></span>
-          <small>${d.note}</small></div>`;
+          <small class="stack"><span>${d.note}</span>${ghosts(BYTE_NOTES)}</small></div>`;
       }).join(""));
       if (w === 16) put(root, "unit", describeCodePoint(v, true));
       if (w === 32) put(root, "cp", describeCodePoint(v, false));
@@ -838,15 +869,15 @@ const LENSES = {
         <span class="field"><input id="fval" inputmode="decimal" autocomplete="off" spellcheck="false" aria-describedby="fmsg"></span>
       </label>
       <p class="msg" id="fmsg" role="status"></p>
-      ${kv(row("Kind", "kind"), row("Sign", "sign"), row("Exponent", "exp"), row("Significand", "sig"), row("Exact value", "exact"))}
+      ${kv(row("Kind", "kind", Object.values(FLOAT_KINDS)), row("Sign", "sign"),
+           row("Exponent", "exp", floatExpAlts(FLOATS[w])), row("Significand", "sig", floatSigAlts(FLOATS[w])),
+           row("Exact value", "exact"))}
       <p class="fmt">Add 1 and Subtract 1 on the panel step to the next representable number, which is a good way to see the gaps between floats grow.</p>`,
     update(v, w, root) {
       const fmt = FLOATS[w], d = decodeFloat(v, fmt), F = fmt.F;
       const input = root.querySelector("#fval");
       if (input && document.activeElement !== input) input.value = shortestDecimal(v, fmt, d.value);
-      const kinds = { normal: "Normal", sub: "Subnormal, with reduced precision near zero", zero: "Zero",
-                      inf: "Infinity", nan: "Not a number (NaN)" };
-      put(root, "kind", kinds[d.kind]);
+      put(root, "kind", FLOAT_KINDS[d.kind]);
       put(root, "sign", d.s ? "1, negative" : "0, positive");
       const fracBits = d.f.toString(2).padStart(F, "0");
       if (d.kind === "normal") {
@@ -939,7 +970,8 @@ const LENSES = {
              0o04: ["d", "Directory"], 0o02: ["c", "Character device"], 0o01: ["p", "Named pipe (FIFO)"] },
     html: () => `
       <p class="big" data-k="ls"></p>
-      ${kv(row("Type", "type"), row("Octal", "oct"), row("Permissions", "chmod"), row("Special bits", "special"))}
+      ${kv(row("Type", "type", ["Character device (02 octal)", "Symbolic link (12 octal)", "Named pipe (FIFO) (01 octal)", "Unused type code 17"]),
+           row("Octal", "oct"), row("Permissions", "chmod"), row("Special bits", "special", ["set user ID, set group ID, sticky"]))}
       <p class="fmt">The 16-bit <code>st_mode</code> that a Unix <code>stat</code> call returns: four bits of file type, three special bits, then read, write, and execute for the owner, the group, and everyone else. Octal groups line the switches up with the permission digits.</p>`,
     update(v, w, root) {
       const t = bitsOf(v, 12, 4), suid = bitsOf(v, 11, 1), sgid = bitsOf(v, 10, 1), sticky = bitsOf(v, 9, 1);
@@ -965,8 +997,8 @@ const LENSES = {
       { name: "Day", bits: 5, color: "var(--f3)" },
     ],
     html: () => `
-      <p class="big sans" data-k="big"></p>
-      ${kv(row("Year", "y"), row("Month", "m"), row("Day", "d"))}
+      <p class="big sans stack"><span data-k="big"></span>${ghosts([dosDateText(2037, 9, 30)])}</p>
+      ${kv(row("Year", "y"), row("Month", "m", ["9, September", "15, out of range (1 to 12)"]), row("Day", "d", ["31, out of range (1 to 28)"]))}
       <p><button type="button" class="act" data-act="today">Set to today</button></p>
       <p class="fmt">How MS-DOS and the FAT file system date a file: seven bits of years since 1980 (good through 2107), four of month, five of day. Plenty of bit patterns are not real dates.</p>`,
     update(v, w, root) {
@@ -974,9 +1006,7 @@ const LENSES = {
       const okM = m >= 1 && m <= 12, okD = okM && d >= 1 && d <= daysIn(y, m);
       const big = root.querySelector('[data-k="big"]');
       big.classList.toggle("invalid", !okD);
-      big.textContent = okD
-        ? new Intl.DateTimeFormat(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }).format(Date.UTC(y, m - 1, d))
-        : "Not a real date";
+      big.textContent = okD ? dosDateText(y, m, d) : "Not a real date";
       put(root, "y", `${y - 1980} + 1980 = ${y}`);
       put(root, "m", okM ? `${m}, ${MONTHS[m - 1]}` : `${m}, out of range (1 to 12)`);
       put(root, "d", !okM || okD ? `${d}` : `${d}, out of range (1 to ${daysIn(y, m)})`);
@@ -998,7 +1028,8 @@ const LENSES = {
     ],
     html: () => `
       <p class="big" data-k="big"></p>
-      ${kv(row("Hours", "h"), row("Minutes", "m"), row("Seconds", "s"))}
+      ${kv(row("Hours", "h", ["31, out of range (0 to 23)"]), row("Minutes", "m", ["63, out of range (0 to 59)"]),
+           row("Seconds", "s", ["31 × 2 = 62, out of range (0 to 58)"]))}
       <p><button type="button" class="act" data-act="now">Set to now</button></p>
       <p class="fmt">The other half of a FAT timestamp. Five bits can't count to 59, so seconds are stored halved, and every DOS file time lands on an even second.</p>`,
     update(v, w, root) {
@@ -1024,7 +1055,7 @@ const LENSES = {
     fields: () => [1, 2, 3, 4].map((n) => ({ name: `Octet ${n}`, bits: 8, color: n % 2 ? "var(--f1)" : "var(--f3)" })),
     html: () => `
       <p class="big" data-k="big"></p>
-      ${kv(row("Range", "range"), row("Reverse DNS", "rdns"))}
+      ${kv(row("Range", "range", ["Carrier-grade NAT (100.64.0.0/10)", "Private network (192.168.0.0/16)", "Documentation (198.51.100.0/24)"]), row("Reverse DNS", "rdns", ["255.255.255.255.in-addr.arpa"]))}
       <p class="fmt">An IPv4 address is one 32-bit number written as four bytes in decimal. That is why there are only about 4.3 billion of them.</p>`,
     classify(o) {
       const [a, b, c, d] = o;
@@ -1058,7 +1089,8 @@ const LENSES = {
     fields: () => [{ name: "Seconds since 1970, signed", bits: 32, color: "var(--f2)" }],
     html: () => `
       <p class="big" data-k="big"></p>
-      ${kv(row("Local time", "local"), row("Seconds", "secs"), row("Until 2038", "left"))}
+      ${kv(row("Local time", "local", [esc(new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeStyle: "long" }).format(Date.UTC(2037, 8, 30, 12, 59, 59)))]),
+           row("Seconds", "secs"), row("Until 2038", "left", [`${(2 ** 32 - 1).toLocaleString()} seconds, about 136.1 years`]))}
       <p><button type="button" class="act" data-act="now">Set to now</button></p>
       <p class="fmt">A signed 32-bit count of seconds since 1 January 1970 UTC. It runs out at 03:14:07 UTC on 19 January 2038; one more second wraps it back to December 1901. Try 7FFFFFFF in hex, then Add 1.</p>`,
     update(v, w, root) {
@@ -1218,7 +1250,9 @@ function render(src = "") {
   });
   let ones = 0;
   for (let i = 0; i < w; i++) ones += bitsOf(v, i, 1);
-  $("count").textContent = `${ones} of ${w} bits set.` + (ones === 1 ? ` That makes it a power of two: 2^${Math.log2(v)}.` : "");
+  const countText = (n, p) => `${n} of ${w} bits set.` + (n === 1 ? ` That makes it a power of two: 2^${p}.` : "");
+  $("count").textContent = countText(ones, Math.log2(v));
+  $("countGhost").textContent = countText(1, w - 1);
 
   const lens = LENSES[state.lens];
   let pos = w;
@@ -1226,7 +1260,7 @@ function render(src = "") {
     pos -= f.bits;
     const raw = bitsOf(v, pos, f.bits);
     return `<li style="--c:${f.color || PALETTE[i % PALETTE.length]}"><i></i>${f.name}
-      ${f.bits <= 16 ? `<code>${raw.toString(2).padStart(f.bits, "0")}</code>${f.bits > 1 ? ` = ${raw}` : ""}` : ""}</li>`;
+      ${f.bits <= 16 ? `<code>${raw.toString(2).padStart(f.bits, "0")}</code>${f.bits > 1 ? `<span class="eq" style="--n:${String(P2(f.bits) - 1).length + 2}ch">= ${raw}</span>` : ""}` : ""}</li>`;
   }).join("");
   lens.update(v, w, $("lensBody"));
 
