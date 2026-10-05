@@ -215,14 +215,27 @@ input:focus-visible {
   display: block;
   text-decoration: none;
   color: inherit;
-  background: var(--tag);
-  border: 1.5px solid var(--ink);
-  border-radius: 4px 4px 4px 4px;
-  clip-path: polygon(14% 0%, 86% 0%, 100% 12%, 100% 100%, 0% 100%, 0% 12%);
+  /* The tag itself is the ink "border": its ::after is the card stock, inset
+     by the border width and clipped along a parallel cut so the clipped
+     corners keep a 1.5px edge too. Corner cuts are 40px x 22px. */
+  background: var(--ink);
+  border-radius: 4px;
+  clip-path: polygon(40px 0, calc(100% - 40px) 0, 100% 22px, 100% 100%, 0 100%, 0 22px);
+  isolation: isolate;
   padding: 2.4rem 1.2rem 1.2rem; min-height: 100%;
   transform: rotate(var(--tilt, 0deg));
   transform-origin: 50% 0;
   transition: transform .25s ease;
+}
+.tag::after { /* card stock */
+  content: "";
+  position: absolute;
+  inset: 1.5px;
+  z-index: -1;
+  background: var(--tag);
+  border-radius: 2.5px;
+  /* the outer cut's diagonal offset inward by 1.5px, in this box's coordinates */
+  clip-path: polygon(38.9px 0, calc(100% - 38.9px) 0, 100% 21.4px, 100% 100%, 0 100%, 0 21.4px);
 }
 .tag::before { /* eyelet */
   content: "";
