@@ -329,7 +329,7 @@ footer {
   <header>
     <div>
       <h1>The Cabinet of Curios</h1>
-      <p class="sub">Toys, guides, and weird things! From <a href="https://strangeleaflet.com">Strange Leaflet</a></p>
+      <p class="sub">Exhibits, toys, guides, and weird things! From <a href="https://strangeleaflet.com">Strange Leaflet</a></p>
     </div>
     <button class="toggle" id="toggle" aria-pressed="false" aria-controls="console">&gt; Text mode</button>
   </header>
@@ -348,6 +348,7 @@ footer {
 
   <nav class="filters" aria-label="Filter">
     <button data-kind="all" aria-pressed="true">All</button>
+    <button data-kind="exhibit" aria-pressed="false">Exhibits</button>
     <button data-kind="toy" aria-pressed="false">Toys</button>
     <button data-kind="guide" aria-pressed="false">Guides</button>
   </nav>
@@ -366,19 +367,19 @@ const CURIOS = [
   { id: "wave", name: "Behringer Wave Guide", kind: "guide", href: "behringer-wave/",
     blurb: "A practical walkthrough of the Wave's wavetable engine, with patch notes.",
     words: ["wave", "behringer"] },
-  { id: "bits", name: "Bitfield Explorer", kind: "toy", href: "bitfield-explorer/",
+  { id: "bits", name: "Bitfield Explorer", kind: "exhibit", href: "bitfield-explorer/",
     blurb: "Flip switches and read the bits as numbers, text, floats, colors, and dates.",
     words: ["bitfield", "explorer"] },
-  { id: "minifloat", name: "Minifloat Ruler", kind: "toy", href: "minifloat-ruler/",
+  { id: "minifloat", name: "Minifloat Ruler", kind: "exhibit", href: "minifloat-ruler/",
     blurb: "Every number an 8-bit float can hold, on one ruler. Watch the gaps double.",
     words: ["minifloat", "ruler"] },
   { id: "pocket-places", name: "Pocket Places", kind: "toy", href: "pocket-places/",
     blurb: "A chill animated pixel art diorama with custom decorations.",
     words: ["pocket", "places"] },
-  { id: "lehmer", name: "Lehmer Codes", kind: "toy", href: "lehmer-codes/",
+  { id: "lehmer", name: "Lehmer Codes", kind: "exhibit", href: "lehmer-codes/",
     blurb: "Turn any order of up to five cards into a short code, then turn the code back into the order.",
     words: ["lehmer", "codes"] },
-  { id: "odometers", name: "Odometers", kind: "toy", href: "odometers/",
+  { id: "odometers", name: "Odometers", kind: "exhibit", href: "odometers/",
     blurb: "Explore how number bases work: base-10, base-2, clock, and factorial base.",
     words: ["odometers", "odometer"] },
 ];
@@ -447,7 +448,7 @@ const BLOG_URL = "https://strangeleaflet.com";
 
 const LEAFLET = `WELCOME TO THE CABINET OF CURIOS!
 
-This room holds the toys, guides, and assorted oddments of Strange Leaflet. Each curio hangs from a paper tag. Examine one to read its tag, or get one to try it out.`;
+This room holds the exhibits, toys, guides, and assorted oddments of Strange Leaflet. Each curio hangs from a paper tag. Examine one to read its tag, or get one to try it out.`;
 
 const CAN_GO_BACK = history.length > 1 && !(DEMO && SIMULATE_DIRECT_ARRIVAL);
 
