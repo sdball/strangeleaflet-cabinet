@@ -535,6 +535,11 @@ h2 {
   min-height: 40px;
   cursor: pointer;
 }
+.act[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--plate);
+  border-color: var(--ink);
+}
 
 .swatch {
   height: 7.5rem;
@@ -1030,7 +1035,7 @@ const LENSES = {
       <p class="big" data-k="big"></p>
       ${kv(row("Hours", "h", ["31, out of range (0 to 23)"]), row("Minutes", "m", ["63, out of range (0 to 59)"]),
            row("Seconds", "s", ["31 × 2 = 62, out of range (0 to 58)"]))}
-      <p><button type="button" class="act" data-act="now">Set to now</button></p>
+      <p><button type="button" class="act" data-act="now">Set to now</button> <button type="button" class="act" data-act="tick" aria-pressed="false">Follow clock</button></p>
       <p class="fmt">The other half of a FAT timestamp. Five bits can't count to 59, so seconds are stored halved, and every DOS file time lands on an even second.</p>`,
     update(v, w, root) {
       const h = bitsOf(v, 11, 5), m = bitsOf(v, 5, 6), s2 = bitsOf(v, 0, 5);
@@ -1042,11 +1047,9 @@ const LENSES = {
       put(root, "m", m < 60 ? `${m}` : `${m}, out of range (0 to 59)`);
       put(root, "s", s2 < 30 ? `${s2} × 2 = ${s2 * 2}` : `${s2} × 2 = ${s2 * 2}, out of range (0 to 58)`);
     },
-    bind(root) {
-      root.querySelector('[data-act="now"]').addEventListener("click", () => {
-        const n = new Date();
-        setValue(n.getHours() * 2048 + n.getMinutes() * 32 + Math.floor(n.getSeconds() / 2), "lens");
-      });
+    now() {
+      const n = new Date();
+      return n.getHours() * 2048 + n.getMinutes() * 32 + Math.floor(n.getSeconds() / 2);
     },
   },
 
@@ -1091,7 +1094,7 @@ const LENSES = {
       <p class="big" data-k="big"></p>
       ${kv(row("Local time", "local", [esc(new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeStyle: "long" }).format(Date.UTC(2037, 8, 30, 12, 59, 59)))]),
            row("Seconds", "secs"), row("Until 2038", "left", [`${(2 ** 32 - 1).toLocaleString()} seconds, about 136.1 years`]))}
-      <p><button type="button" class="act" data-act="now">Set to now</button></p>
+      <p><button type="button" class="act" data-act="now">Set to now</button> <button type="button" class="act" data-act="tick" aria-pressed="false">Follow clock</button></p>
       <p class="fmt">A signed 32-bit count of seconds since 1 January 1970 UTC. It runs out at 03:14:07 UTC on 19 January 2038; one more second wraps it back to December 1901. Try 7FFFFFFF in hex, then Add 1.</p>`,
     update(v, w, root) {
       const s = toSigned(v, 32), dt = new Date(s * 1000);
@@ -1101,9 +1104,7 @@ const LENSES = {
       const left = 2147483647 - s;
       put(root, "left", left === 0 ? "This is the last second" : `${left.toLocaleString()} seconds, about ${(left / 31556952).toFixed(1)} years`);
     },
-    bind(root) {
-      root.querySelector('[data-act="now"]').addEventListener("click", () => setValue(Math.floor(Date.now() / 1000) >>> 0, "lens"));
-    },
+    now: () => Math.floor(Date.now() / 1000) >>> 0,
   },
 };
 
@@ -1225,10 +1226,31 @@ function buildTabs() {
     `<button type="button" data-lens="${k}" aria-pressed="${k === state.lens}">${LENSES[k].name}</button>`).join("");
 }
 function buildLens() {
+  stopClock();
   const lens = LENSES[state.lens], body = $("lensBody");
   body.innerHTML = lens.html(state.w);
   if (lens.bind) lens.bind(body, state.w);
+  if (lens.now) {
+    body.querySelector('[data-act="now"]').addEventListener("click", () => setValue(lens.now(), "lens"));
+    body.querySelector('[data-act="tick"]')?.addEventListener("click", () => (clockTimer ? stopClock() : startClock()));
+  }
   colorBands();
+}
+
+// "Follow clock" keeps a time lens on the current time until anything else changes the value
+let clockTimer = null;
+function startClock() {
+  const lens = LENSES[state.lens], btn = $("lensBody").querySelector('[data-act="tick"]');
+  const tick = () => { const v = lens.now(); if (v !== state.v) setValue(v, "clock"); };
+  tick();
+  clockTimer = setInterval(tick, 250);
+  btn.setAttribute("aria-pressed", "true");
+}
+function stopClock() {
+  if (!clockTimer) return;
+  clearInterval(clockTimer);
+  clockTimer = null;
+  $("lensBody").querySelector('[data-act="tick"]')?.setAttribute("aria-pressed", "false");
 }
 
 // ---------- Rendering ----------
@@ -1274,6 +1296,7 @@ function render(src = "") {
   hashTimer = setTimeout(writeHash, 200);
 }
 function setValue(v, src) {
+  if (src !== "clock") stopClock();
   state.v = (v & maskOf(state.w)) >>> 0;
   render(src);
 }
