@@ -426,8 +426,8 @@ footer p { margin: 0 0 .5rem; }
     </div>
 
     <div class="ops">
-      <button type="button" class="btn" id="dec">Bits − 1</button>
-      <button type="button" class="btn" id="inc">Bits + 1</button>
+      <button type="button" class="btn" id="dec" aria-keyshortcuts="-" title="Shortcut: -">Bits − 1</button>
+      <button type="button" class="btn" id="inc" aria-keyshortcuts="+" title="Shortcut: +">Bits + 1</button>
       <button type="button" class="btn" id="neg">Flip sign</button>
       <button type="button" class="btn" id="one">Set to 1</button>
     </div>
@@ -969,6 +969,12 @@ $("neg").addEventListener("click", () => {
   setBits(state.bits ^ 128, { keepAim: true });
 });
 $("one").addEventListener("click", () => setBits(encode(state.f, 1)));
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.matches("input, textarea, select")) return;
+  const btn = { "+": "inc", "=": "inc", "-": "dec" }[e.key];
+  if (btn) { e.preventDefault(); $(btn).click(); }
+});
 
 document.querySelectorAll(".try").forEach((b) => b.addEventListener("click", () => {
   const f = state.f;
