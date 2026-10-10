@@ -1,0 +1,18 @@
+#!/bin/sh
+# Refuse commits that add or change a public page without the GoatCounter snippet.
+# Checks the staged version of each file, not the working copy.
+
+marker='data-goatcounter="https://sdball.goatcounter.com/count"'
+missing=""
+
+for f in $(git diff --cached --name-only --diff-filter=ACMR -- 'public/*.html'); do
+  git show ":$f" | grep -qF "$marker" || missing="$missing  $f
+"
+done
+
+if [ -n "$missing" ]; then
+  echo "These pages are missing the GoatCounter snippet:" >&2
+  printf "%s" "$missing" >&2
+  echo "Add it before </head>, or commit with --no-verify to skip this check." >&2
+  exit 1
+fi

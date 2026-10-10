@@ -31,6 +31,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Check every page has GoatCounter
+        run: |
+          missing=$(grep -rL --include='*.html' 'data-goatcounter="https://sdball.goatcounter.com/count"' public || true)
+          if [ -n "$missing" ]; then
+            echo "::error::These pages are missing the GoatCounter snippet:"
+            echo "$missing"
+            exit 1
+          fi
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
