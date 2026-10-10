@@ -372,6 +372,15 @@ h2 { font: 400 1.6rem/1.2 var(--serif); margin: 0 0 .75rem; }
 .notes li { margin-bottom: .55rem; }
 .notes code { font: 700 .95em var(--mono); white-space: nowrap; }
 
+.reflex { max-width: 66ch; margin-top: 2.25rem; }
+.bars { list-style: none; padding: 0; margin: 1rem 0 1.25rem; display: grid; gap: .7rem; }
+.bars li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem .75rem; align-items: baseline; }
+.bars .what { font-size: .98rem; }
+.bars .ms { font: 700 .9rem var(--mono); color: var(--muted); white-space: nowrap; }
+.bars .bar { grid-column: 1 / -1; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.bars .bar i { display: block; height: 100%; width: var(--w); border-radius: 5px; background: var(--accent); }
+.bars .human .bar i { background: var(--muted); }
+
 @media (prefers-reduced-motion: reduce) {
   .decoded .caret { animation: none; }
   .key .arm, .lamp { transition: none; }
@@ -471,7 +480,25 @@ h2 { font: 400 1.6rem/1.2 var(--serif); margin: 0 0 .75rem; }
       <li><b>Speed is measured with PARIS.</b> The word PARIS plus its word gap is exactly 50 units, so at 12 words per minute the unit is 60 seconds ÷ (12 × 50) = 100 ms. Try it from the sample buttons.</li>
       <li><b>SOS isn't three letters.</b> It's sent as one run, <code>···−−−···</code>, with no letter gaps. Tap it without pausing on the Receive key and see what comes out.</li>
       <li><b>"What hath God wrought"</b> was the first message on Morse's Washington to Baltimore line in 1844. It was sent in American Morse, an older cousin with different codes and some extra-long dashes. This page uses International Morse, which is what radio operators still use.</li>
+      <li><b>Ears beat the paper tape.</b> Morse's receiver was a register that marked dots and dashes on a moving strip of paper, and an operator read the tape by eye. But the register clicked as it marked, and operators found they could decode the clicks as they arrived, faster than reading the tape and with their hands free to write. Companies distrusted this at first and some banned it. One Erie Railroad supervisor caught his operators at it, tested them, found no mistakes and let them drop the tape. Soon telegraph makers sold the <i>sounder</i>, a receiver built only to click, with no paper at all.</li>
     </ul>
+  </section>
+
+  <section class="reflex" aria-labelledby="reflex-h">
+    <h2 id="reflex-h">Faster than a reflex</h2>
+    <p>A dot lasts 1200 ÷ WPM milliseconds. Even at 5 WPM a dot lasts 240 ms, and at any faster speed it's over before anyone could react to it.</p>
+    <ul class="bars">
+      <li class="human"><span class="what">A typical reaction to a beep or a flash</span><span class="ms">~200–250 ms</span><span class="bar"><i style="--w: 100%"></i></span></li>
+      <li><span class="what">A dot at 12 WPM, this page's starting speed</span><span class="ms">100 ms</span><span class="bar"><i style="--w: 40%"></i></span></li>
+      <li><span class="what">A dot at 30 WPM, this page's top speed</span><span class="ms">40 ms</span><span class="bar"><i style="--w: 16%"></i></span></li>
+      <li><span class="what">A dot at about 32 WPM, Jesse Bunnell's pace for two hours in 1860</span><span class="ms">~38 ms</span><span class="bar"><i style="--w: 15%"></i></span></li>
+      <li><span class="what">A dot at 75.2 WPM, Ted McElroy's 1939 receiving record</span><span class="ms">16 ms</span><span class="bar"><i style="--w: 6.4%"></i></span></li>
+    </ul>
+    <p><b>Gamers aren't much quicker.</b> Professional esports players are famous for fast hands, but a 2021 study by Bickmann and colleagues found that pros reacted no faster than amateurs or other athletes on simple tests with lights and sounds. Everyone hits roughly the same floor of a couple hundred milliseconds. Pros win by reading the game and anticipating what comes next.</p>
+    <p><b>Telegraphers did it for a living.</b> This isn't a modern hobbyist's trick. Once operators learned to copy by ear instead of reading paper tape, copying by sound became the job. Railroads, newspapers, stock exchanges and armies ran on operators listening all day, often at 20 WPM or more, where every dot is 60 ms or shorter.</p>
+    <p><b>They did what pros do.</b> Nobody copying at 30 WPM hears dot, dash, dot. Each letter arrives as one sound, a rhythm like <i>di-dah-dit</i> for R, the same way you read a word without spelling it out. Good operators copy several words behind the signal and keep the message in their heads, much like a pro thinking a few moves ahead.</p>
+    <p><b>The hands were busy too.</b> PARIS has 14 dots and dashes, so 30 WPM on a straight key means about 7 presses a second, around 420 a minute. That's in the range of the few hundred actions per minute top StarCraft players are known for. In 1860 a 17-year-old Jesse Bunnell sent President Buchanan's last message to Congress at about 32 WPM and kept it up for two hours. Professionals keyed so much that they got "glass arm," a repetitive strain injury, and in 1888 Bunnell invented a sideways key to ease it. Gamers' wrists have the same problem today.</p>
+    <p><b>The record is from 1939.</b> Ted McElroy copied 75.2 WPM in a contest that year, and it's still the official record. Some operators say they've copied faster since, but none of those claims are official.</p>
   </section>
 </div>
 
