@@ -965,6 +965,12 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === "Backspace" && keyable(e.target)) { e.preventDefault(); erase(); }
 });
+// A mouse or touch click leaves focus on that control, where Space would press it
+// again. Let go so Space returns to the key; keyboard clicks (detail 0) keep focus.
+document.addEventListener("click", (e) => {
+  const el = document.activeElement;
+  if (e.detail && el?.matches("button, input[type=range], input[type=checkbox]")) el.blur();
+});
 document.addEventListener("keyup", (e) => {
   if (e.code === "Space" || e.key === " " || e.key === "Enter") {
     if (R.down !== null) { e.preventDefault(); keyUp(); }
