@@ -371,6 +371,7 @@ h2 { font: 400 1.6rem/1.2 var(--serif); margin: 0 0 .75rem; }
 .notes { max-width: 66ch; }
 .notes li { margin-bottom: .55rem; }
 .notes code { font: 700 .95em var(--mono); white-space: nowrap; }
+.history { margin-top: 2.25rem; }
 
 .reflex { max-width: 66ch; margin-top: 2.25rem; }
 .bars { list-style: none; padding: 0; margin: 1rem 0 1.25rem; display: grid; gap: .7rem; }
@@ -380,6 +381,10 @@ h2 { font: 400 1.6rem/1.2 var(--serif); margin: 0 0 .75rem; }
 .bars .bar { grid-column: 1 / -1; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
 .bars .bar i { display: block; height: 100%; width: var(--w); border-radius: 5px; background: var(--accent); }
 .bars .human .bar i { background: var(--muted); }
+
+.sources { max-width: 66ch; margin-top: 2.25rem; color: var(--muted); font-size: .92rem; }
+.sources h2 { color: var(--ink); }
+.sources li { margin-bottom: .45rem; }
 
 @media (prefers-reduced-motion: reduce) {
   .decoded .caret { animation: none; }
@@ -486,8 +491,14 @@ h2 { font: 400 1.6rem/1.2 var(--serif); margin: 0 0 .75rem; }
       <li><b>Letters fit in four steps.</b> Down to four dots and dashes there are 2 + 4 + 8 + 16 = 30 paths, enough for 26 letters with four left over. Digits all take five and punctuation five to seven.</li>
       <li><b>Speed is measured with PARIS.</b> The word PARIS plus its word gap is exactly 50 units, so at 12 words per minute the unit is 60 seconds ÷ (12 × 50) = 100 ms. Try it from the sample buttons.</li>
       <li><b>SOS isn't three letters.</b> It's sent as one run, <code>···−−−···</code>, with no letter gaps. Tap it without pausing on the Receive key and see what comes out.</li>
+    </ul>
+  </section>
+
+  <section class="notes history" aria-labelledby="history-h">
+    <h2 id="history-h">A little history</h2>
+    <ul>
       <li><b>"What hath God wrought"</b> was the first message on Morse's Washington to Baltimore line in 1844. It was sent in American Morse, an older cousin with different codes and some extra-long dashes. This page uses International Morse, which is what radio operators still use.</li>
-      <li><b>Ears beat the paper tape.</b> Morse's receiver was a register that marked dots and dashes on a moving strip of paper, and an operator read the tape by eye. But the register clicked as it marked, and operators found they could decode the clicks as they arrived, faster than reading the tape and with their hands free to write. Companies distrusted this at first. A story printed in 1910 says that in 1851 a conductor caught 19-year-old Charles Douglas ignoring the tape at the Erie Railroad's office in Addison, New York. Douglas copied a train order from the tape and it matched exactly, but the conductor reported him anyway. Called in for a reprimand, he showed the superintendent he could copy by sound and was promoted instead. The tape lingered for years, but listening became the job, and telegraph makers eventually sold the <i>sounder</i>, a receiver built only to click, with no paper at all.</li>
+      <li><b>Ears beat the paper tape.</b> Morse's receiver was a register that marked dots and dashes on a moving strip of paper, and an operator read the tape by eye. But the register clicked as it marked, and operators found they could decode the clicks as they arrived, faster than reading the tape and with their hands free to write. Companies distrusted this at first, and the Morse company reportedly forbade it. Operators did it anyway. Several were later celebrated as the first to read by sound, including James Leonard in Kentucky in 1848 and Charles Douglas on the Erie Railroad in 1851, though each claim was written decades later by someone championing one man. Paper tape lingered for years, but listening became the job, and telegraph makers eventually sold the <i>sounder</i>, a receiver built only to click, with no paper at all.</li>
     </ul>
   </section>
 
@@ -506,6 +517,15 @@ h2 { font: 400 1.6rem/1.2 var(--serif); margin: 0 0 .75rem; }
     <p><b>They did what pros do.</b> Nobody copying at 30 WPM hears dot, dash, dot. Each letter arrives as one sound, a rhythm like <i>di-dah-dit</i> for R, the same way you read a word without spelling it out. Good operators copy several words behind the signal and keep the message in their heads, much like a pro thinking a few moves ahead.</p>
     <p><b>The hands were busy too.</b> PARIS has 14 dots and dashes, so 30 WPM on a straight key means about 7 presses a second, around 420 a minute. That's in the range of the few hundred actions per minute top StarCraft players are known for. In 1860 a 17-year-old Jesse Bunnell sent President Buchanan's last message to Congress at about 32 WPM and kept it up for two hours. Professionals keyed so much that they got "glass arm," a repetitive strain injury, and in 1888 Bunnell invented a sideways key to ease it. Gamers' wrists have the same problem today.</p>
     <p><b>The record is from 1939.</b> Ted McElroy copied 75.2 WPM in a contest that year, and it's still the official record. Some operators say they've copied faster since, but none of those claims are official.</p>
+  </section>
+
+  <section class="sources" aria-labelledby="sources-h">
+    <h2 id="sources-h">Sources</h2>
+    <ul>
+      <li>John Wilson Townsend, <a href="https://exploreuk.uky.edu/catalog/xt702v2c8b7k/text"><i>Life of James Francis Leonard: The First Practical Sound-Reader of the Morse Alphabet</i></a> (Filson Club, 1909).</li>
+      <li>"First in His Line," on Charles W. Douglas, January 6, 1910, page 3, <a href="https://nebnewspapers.unl.edu/lccn/2016270205/1910-01-06/ed-1/seq-3.pdf">Nebraska Newspapers</a> (University of Nebraska–Lincoln).</li>
+      <li>George B. Prescott, <i>History, Theory, and Practice of the Electric Telegraph</i> (1860), on the sounder replacing the register, as cited in the <i>Oxford English Dictionary</i> entry for "sounder."</li>
+    </ul>
   </section>
 </div>
 
