@@ -507,10 +507,20 @@ let audio = null;
 let soundOn = true;
 
 function ac() {
-  if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
-  if (audio.state === "suspended") audio.resume();
+  if (!audio) {
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+    if (navigator.audioSession) navigator.audioSession.type = "playback"; // play despite iOS silent switch
+  }
+  // iOS can also leave the context "interrupted" (calls, app switches, locking)
+  if (audio.state !== "running") audio.resume();
   return audio;
 }
+
+// A touch pointerdown doesn't count as a user gesture, so pressing the key can't
+// start audio on phones. Resume from every gesture that does count, wherever it
+// lands, which also recovers the context after an interruption.
+["pointerup", "touchend", "keydown"].forEach((t) =>
+  document.addEventListener(t, () => ac(), { capture: true, passive: true }));
 
 $("sound").addEventListener("click", () => {
   soundOn = !soundOn;
